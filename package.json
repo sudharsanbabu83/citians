@@ -1,0 +1,52 @@
+{
+  "name": "campusflow",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CampusFlow - College workflow management platform",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "start": "npm run dev:mobile",
+    "build": "npm run build --workspaces --if-present",
+    "build:shared": "npm run build -w @campusflow/shared",
+    "build:functions": "npm run build:shared && npm run build -w @campusflow/functions",
+    "build:admin": "npm run build -w @campusflow/admin",
+    "dev:admin": "npm run dev -w @campusflow/admin",
+    "dev:mobile": "npm run start -w @campusflow/mobile",
+    "dev:mobile:prod": "npm run start:prod -w @campusflow/mobile",
+    "dev:mobile:web": "npm run web -w @campusflow/mobile",
+    "emulators:kill-ports": "powershell -ExecutionPolicy Bypass -File ./scripts/kill-emulator-ports.ps1",
+    "emulators:prepare-data": "powershell -ExecutionPolicy Bypass -File ./scripts/prepare-emulator-data.ps1",
+    "emulators": "npm run emulators:kill-ports && npm run emulators:prepare-data && firebase emulators:start --import=./emulator-data --export-on-exit=./emulator-data",
+    "emulators:fresh": "firebase emulators:start",
+    "emulators:exec": "firebase emulators:exec",
+    "seed": "npm run seed -w @campusflow/functions",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test:rules": "firebase emulators:exec --only firestore,storage --project campusflow-f798c \"node scripts/run-rules-tests.mjs\"",
+    "test:rules:local": "node scripts/run-rules-tests.mjs",
+    "deploy": "node scripts/deploy.mjs",
+    "deploy:dev": "node scripts/deploy.mjs --project dev",
+    "deploy:prod": "node scripts/deploy.mjs --project prod",
+    "deploy:hosting": "node scripts/deploy.mjs --only hosting",
+    "deploy:functions": "node scripts/deploy.mjs --only functions",
+    "deploy:rules": "firebase deploy --only firestore:rules,storage",
+    "bootstrap:admin": "npm run bootstrap:admin -w @campusflow/functions --",
+    "android": "npm run run:android -w @campusflow/mobile",
+    "ios": "npm run run:ios -w @campusflow/mobile",
+    "build:mobile:preview": "npm run build:preview -w @campusflow/mobile"
+  },
+  "devDependencies": {
+    "firebase-tools": "^14.0.0",
+    "typescript": "~6.0.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "overrides": {
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  }
+}

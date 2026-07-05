@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "default": "campusflow-f798c",
+    "dev": "campusflow-f798c",
+    "prod": "campusflow-f798c"
+  }
+}

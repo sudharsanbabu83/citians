@@ -1,0 +1,59 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function firestore() {
+      return firestore.get(/databases/(default)/documents);
+    }
+
+    function odRequest(requestId) {
+      return firestore.get(/databases/(default)/documents/odRequests/$(requestId)).data;
+    }
+
+    function userDoc() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isAuth() && userDoc().role == 'ADMIN' && userDoc().isActive == true;
+    }
+
+    function isHod() {
+      return isAuth() && userDoc().role == 'HOD' && userDoc().isActive == true;
+    }
+
+    function hodDepartmentId() {
+      return firestore.get(/databases/(default)/documents/hods/$(request.auth.uid)).data.departmentId;
+    }
+
+    function isOwnerStudent(requestId) {
+      return isAuth() && odRequest(requestId).studentUserId == request.auth.uid;
+    }
+
+    function isHodForRequest(requestId) {
+      return isHod() && odRequest(requestId).departmentId == hodDepartmentId();
+    }
+
+    function isValidFileType() {
+      return request.resource.contentType.matches('application/pdf|image/png|image/jpeg');
+    }
+
+    function isValidFileSize() {
+      return request.resource.size < 10 * 1024 * 1024;
+    }
+
+    match /odRequests/{requestId}/documents/{fileName} {
+      allow read: if isAuth() && (isAdmin() || isHodForRequest(requestId) || isOwnerStudent(requestId));
+      allow write: if isAuth() &&
+        isOwnerStudent(requestId) &&
+        isValidFileSize() &&
+        isValidFileType();
+      allow delete: if isAuth() && (isAdmin() || isOwnerStudent(requestId));
+    }
+  }
+}
