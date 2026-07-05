@@ -19,6 +19,8 @@
     },
     "preview": {
       "distribution": "internal",
+      "node": "20.18.0",
+      "prebuildCommand": "npm run build:shared --prefix ../..",
       "android": {
         "buildType": "apk"
       },
@@ -35,6 +37,8 @@
     },
     "production": {
       "autoIncrement": true,
+      "node": "20.18.0",
+      "prebuildCommand": "npm run build:shared --prefix ../..",
       "android": {
         "buildType": "apk"
       },
