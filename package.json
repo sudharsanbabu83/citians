@@ -36,7 +36,8 @@
     "bootstrap:admin": "npm run bootstrap:admin -w @campusflow/functions --",
     "android": "npm run run:android -w @campusflow/mobile",
     "ios": "npm run run:ios -w @campusflow/mobile",
-    "build:mobile:preview": "npm run build:preview -w @campusflow/mobile"
+    "build:mobile:preview": "npm run build:preview -w @campusflow/mobile",
+    "eas-build-post-install": "npm run build:shared"
   },
   "devDependencies": {
     "firebase-tools": "^14.0.0",
