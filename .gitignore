@@ -32,7 +32,6 @@ apps/mobile/web-build/
 # Build outputs
 dist/
 build/
-lib/
 *.tsbuildinfo
 
 # IDE
