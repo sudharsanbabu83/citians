@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 
 
-import { DoubtCard } from '@/src/components/DoubtCard';
 import { EventListItem } from '@/src/components/EventListItem';
 import { DailySparkCard } from '@/src/components/DailySparkCard';
 import { OpeningSpotlightModal } from '@/src/components/OpeningSpotlightModal';
@@ -21,23 +20,12 @@ import { TechPulsePreview } from '@/src/components/TechPulseFeed';
 import { useEmulators, resolvedEmulatorHost, getEmulatorHost } from '@/src/config/firebase';
 import { useBottomContentPadding } from '@/src/hooks/useBottomContentPadding';
 import { useResponsiveLayout } from '@/src/hooks/useResponsiveLayout';
-import { useDoubts } from '@/src/hooks/useDoubts';
 import { useEvents } from '@/src/hooks/useEvents';
-import { useLoginRequired } from '@/src/hooks/useLoginRequired';
 import { useThemedStyles } from '@/src/hooks/useThemedStyles';
 import { useTheme } from '@/src/hooks/useTheme';
-import { useAuthStore } from '@/src/lib/authStore';
 import type { AppTheme } from '@/src/lib/themeStore';
 import { useAppStore } from '@/src/lib/store';
-import { DEMO_DOUBTS, getDoubtAlias } from '@/src/lib/doubts';
 import { borderRadius, fontFamilies, spacing } from '@/src/theme';
-
-type FeedFilter = 'DOUBTS' | 'EVENTS';
-
-const FEED_FILTERS: Array<{ key: FeedFilter; label: string; icon: keyof typeof Ionicons.glyphMap }> = [
-  { key: 'DOUBTS', label: 'Doubt Exchange', icon: 'git-branch-outline' },
-  { key: 'EVENTS', label: 'Events', icon: 'calendar-outline' },
-];
 
 export default function StudentHomeScreen() {
   const { colors } = useTheme();
@@ -45,21 +33,6 @@ export default function StudentHomeScreen() {
   const bottomPadding = useBottomContentPadding({ extra: spacing.md, includeTabBar: true });
   const responsive = useResponsiveLayout();
   const { healthCheck, healthError, isCheckingHealth } = useAppStore();
-  const roleProfile = useAuthStore((s) => s.roleProfile);
-  const user = useAuthStore((s) => s.user);
-  const requireLogin = useLoginRequired();
-
-  const departmentId = roleProfile?.type === 'STUDENT' ? roleProfile.data.departmentId : undefined;
-
-  const [feedFilter, setFeedFilter] = useState<FeedFilter>('DOUBTS');
-  const {
-    data: doubtPosts = [],
-    isLoading: doubtsLoading,
-    isError: doubtsError,
-    refetch: refetchDoubts,
-    isRefetching: doubtsRefetching,
-  } = useDoubts('PULSE', departmentId);
-
   const {
     data: events = [],
     isLoading: eventsLoading,
@@ -72,16 +45,11 @@ export default function StudentHomeScreen() {
   const connectionFailed = !isCheckingHealth && !!healthError;
   const emulatorHost = resolvedEmulatorHost ?? (useEmulators ? getEmulatorHost() : null);
 
-  const feedDoubts = __DEV__ && (doubtsError || (!doubtsLoading && doubtPosts.length === 0)) ? DEMO_DOUBTS.slice(0, 2) : doubtPosts.slice(0, 4);
-
-  const isRefreshing = doubtsRefetching || eventsRefetching;
-  const isFeedLoading = feedFilter === 'DOUBTS' ? doubtsLoading : eventsLoading;
-  const isFeedError = feedFilter === 'DOUBTS' ? false : eventsError;
+  const isRefreshing = eventsRefetching;
 
   const handleRefresh = useCallback(() => {
-    refetchDoubts();
     refetchEvents();
-  }, [refetchDoubts, refetchEvents]);
+  }, [refetchEvents]);
 
   return (
     <View style={styles.container}>
@@ -94,7 +62,7 @@ export default function StudentHomeScreen() {
         <StudentWelcomeMoment
           onAction={(momentId) => {
             const route = momentId === 'next-step'
-              ? '/(student)/(tabs)/build'
+              ? '/(student)/leetcode'
               : momentId === 'build-together'
                 ? '/(student)/network'
                 : momentId === 'tiny-win'
@@ -105,24 +73,6 @@ export default function StudentHomeScreen() {
         />
 
         <DailySparkCard />
-
-        <Pressable
-            style={styles.composePrompt}
-            onPress={() => {
-              if (requireLogin('drop an anonymous doubt')) {
-                router.push('/(student)/(tabs)/build' as Href);
-              }
-            }}
-          >
-            <View style={styles.composerAvatar}>
-              <Text style={styles.composerAvatarText}>?</Text>
-            </View>
-            <View style={styles.composePromptField}>
-            <Text style={styles.composePromptText}>What are you quietly stuck on?</Text>
-            <Text style={styles.composePromptSubtext}>{user ? `Posting as ${getDoubtAlias(user.uid)}` : 'Anonymous campus alias'}</Text>
-            </View>
-            <Ionicons name="git-branch-outline" size={22} color={colors.link} />
-          </Pressable>
 
         <Pressable
           style={[styles.focusCard, styles.cardShadow]}
@@ -191,62 +141,21 @@ export default function StudentHomeScreen() {
         </Pressable>
 
         <View style={styles.feedHeading}>
-          <Text style={styles.feedTitle}>Recommended for you</Text>
+          <Text style={styles.feedTitle}>Upcoming events</Text>
           <Ionicons name="ellipsis-horizontal" size={20} color={colors.textMuted} />
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
-          {FEED_FILTERS.map((item) => {
-            const active = feedFilter === item.key;
-            return (
-              <Pressable
-                key={item.key}
-                style={[styles.filterChip, active && styles.filterChipActive]}
-                onPress={() => setFeedFilter(item.key)}
-              >
-                <Ionicons
-                  name={item.icon}
-                  size={14}
-                  color={active ? colors.success : colors.textMuted}
-                />
-                <Text style={[styles.filterText, active && styles.filterTextActive]}>
-                  {item.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-
-        {isFeedLoading ? (
+        {eventsLoading ? (
           <View style={styles.centered}>
             <ActivityIndicator color={colors.primary} size="large" />
           </View>
-        ) : isFeedError ? (
+        ) : eventsError ? (
           <View style={styles.emptyCard}>
             <Text style={styles.errorText}>Could not load the feed.</Text>
             <Pressable style={styles.retryButton} onPress={handleRefresh}>
               <Text style={styles.retryText}>Try again</Text>
             </Pressable>
           </View>
-        ) : feedFilter === 'DOUBTS' ? (
-          feedDoubts.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>No doubt signals yet</Text>
-              <Text style={styles.emptyCaption}>
-                Ask what others may be too nervous to say out loud.
-              </Text>
-              <Pressable
-                style={styles.primaryButton}
-                onPress={() => router.push('/(student)/(tabs)/build' as Href)}
-              >
-                <Text style={styles.primaryButtonText}>Open Doubt Exchange</Text>
-              </Pressable>
-            </View>
-          ) : (
-            feedDoubts.map((doubt) => (
-              <DoubtCard key={doubt.id} doubt={doubt} onPress={() => router.push({ pathname: '/(student)/doubts/[id]', params: { id: doubt.id } } as Href)} />
-            ))
-          )
         ) : events.length === 0 ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyTitle}>No upcoming events</Text>

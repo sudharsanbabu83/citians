@@ -50,16 +50,6 @@ export default function StudentTabLayout() {
           }}
         />
         <Tabs.Screen
-          name="build"
-          options={{
-            title: 'Doubts',
-            sceneStyle: { backgroundColor: pageBackground('#F0FAF8') },
-            tabBarActiveTintColor: '#087F73',
-            tabBarActiveBackgroundColor: '#DDF8F1',
-            tabBarIcon: ({ color, size, focused }) => <AnimatedTabIcon name="git-branch" size={size} color={color} focused={focused} />,
-          }}
-        />
-        <Tabs.Screen
           name="events"
           options={{
             title: 'Events',
@@ -77,16 +67,6 @@ export default function StudentTabLayout() {
             tabBarActiveTintColor: '#D73A72',
             tabBarActiveBackgroundColor: '#FFE5EF',
             tabBarIcon: ({ color, size, focused }) => <AnimatedTabIcon name="trophy" size={size} color={color} focused={focused} />,
-          }}
-        />
-        <Tabs.Screen
-          name="canvas"
-          options={{
-            title: 'Canvas',
-            sceneStyle: { backgroundColor: pageBackground('#F7F4EE') },
-            tabBarActiveTintColor: '#5E4A9B',
-            tabBarActiveBackgroundColor: '#E8DEFF',
-            tabBarIcon: ({ color, size, focused }) => <AnimatedTabIcon name="color-palette" size={size} color={color} focused={focused} />,
           }}
         />
         <Tabs.Screen

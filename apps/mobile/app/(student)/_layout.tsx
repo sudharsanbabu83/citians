@@ -3,7 +3,6 @@ import { Redirect, Stack, usePathname } from 'expo-router';
 import { SETUP_PROFILE_ROUTE } from '@/src/lib/auth';
 import { useStackLogoHeaderOptions } from '@/src/hooks/useLogoHeaderOptions';
 import { useAuthStore } from '@/src/lib/authStore';
-import { MascotCompanion } from '@/src/components/MascotCompanion';
 import { View } from 'react-native';
 
 export default function StudentLayout() {
@@ -20,7 +19,6 @@ export default function StudentLayout() {
   const eventAnnouncementsHeader = useStackLogoHeaderOptions('Event Signal');
   const competitionDetailHeader = useStackLogoHeaderOptions('Competition Details');
   const profileHeader = useStackLogoHeaderOptions('Profile');
-  const doubtHeader = useStackLogoHeaderOptions('Doubt Exchange');
   const focusBlockerHeader = useStackLogoHeaderOptions('Focus Blocker');
   const techPulseHeader = useStackLogoHeaderOptions('Tech Pulse');
   const leetcodeHeader = useStackLogoHeaderOptions('Code Together');
@@ -47,6 +45,13 @@ export default function StudentLayout() {
     '/events/my-registrations',
   ].some((path) => pathname.includes(path)) || /\/events\/[^/]+\/(attendees|ticket|scan|announcements)$/.test(pathname);
 
+  // Keep these screens in the source tree for a future re-enable, but make
+  // the temporarily disabled features unreachable from deep links too.
+  const disabledFeatureRoute = pathname.includes('/canvas') || pathname.includes('/build') || pathname.includes('/doubts');
+  if (!isAuthLoading && disabledFeatureRoute) {
+    return <Redirect href="/(student)/(tabs)" />;
+  }
+
   if (!isAuthLoading && !user && needsSignIn) {
     return <Redirect href="/login" />;
   }
@@ -66,7 +71,6 @@ export default function StudentLayout() {
       <Stack.Screen name="events/[id]/scan" options={eventScanHeader} />
       <Stack.Screen name="events/[id]/announcements" options={eventAnnouncementsHeader} />
       <Stack.Screen name="competitions/[id]" options={competitionDetailHeader} />
-      <Stack.Screen name="doubts/[id]" options={doubtHeader} />
       <Stack.Screen name="focus-blocker" options={focusBlockerHeader} />
       <Stack.Screen name="tech-pulse" options={techPulseHeader} />
       <Stack.Screen name="leetcode" options={leetcodeHeader} />
@@ -75,7 +79,6 @@ export default function StudentLayout() {
       <Stack.Screen name="network-feed" options={networkFeedHeader} />
       <Stack.Screen name="resume-builder" options={resumeBuilderHeader} />
       </Stack>
-      <MascotCompanion />
     </View>
   );
 }

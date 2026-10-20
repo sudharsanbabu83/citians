@@ -2,9 +2,7 @@ import { useMemo } from 'react';
 
 import { useDebouncedValue } from '@/src/hooks/useDebouncedValue';
 import { usePublishedCompetitions } from '@/src/hooks/useCompetitions';
-import { useDoubts } from '@/src/hooks/useDoubts';
 import { useEvents } from '@/src/hooks/useEvents';
-import { useAuthStore } from '@/src/lib/authStore';
 import {
   buildStudentSearchResults,
   STUDENT_SEARCH_DEBOUNCE_MS,
@@ -23,11 +21,6 @@ export function useStudentSearch(): {
 } {
   const inputQuery = useStudentSearchStore((s) => s.query);
   const debouncedQuery = useDebouncedValue(inputQuery, STUDENT_SEARCH_DEBOUNCE_MS);
-  const roleProfile = useAuthStore((s) => s.roleProfile);
-  const departmentId =
-    roleProfile?.type === 'STUDENT' ? roleProfile.data.departmentId : undefined;
-
-  const { data: doubts = [], isLoading: doubtsLoading } = useDoubts('PULSE', departmentId);
   const { data: events = [], isLoading: eventsLoading } = useEvents('ALL');
   const { data: competitions = [], isLoading: competitionsLoading } = usePublishedCompetitions('ALL');
 
@@ -40,11 +33,10 @@ export function useStudentSearch(): {
     () =>
       buildStudentSearchResults({
         query: debouncedQuery,
-        doubts,
         events,
         competitions,
       }),
-    [debouncedQuery, doubts, events, competitions]
+    [debouncedQuery, events, competitions]
   );
 
   return {
@@ -53,6 +45,6 @@ export function useStudentSearch(): {
     results,
     isSearching: trimmedDebounced.length >= STUDENT_SEARCH_MIN_LENGTH,
     isDebouncing,
-    isLoading: doubtsLoading || eventsLoading || competitionsLoading,
+    isLoading: eventsLoading || competitionsLoading,
   };
 }

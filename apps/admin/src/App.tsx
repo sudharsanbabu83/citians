@@ -11,7 +11,6 @@ function lazyNamed<T extends Record<string, ComponentType>>(loader: () => Promis
 
 const AuditLogsPage = lazyNamed(() => import('./pages/AuditLogsPage'), 'AuditLogsPage');
 const CompetitionsAdminsPage = lazyNamed(() => import('./pages/CompetitionsAdminsPage'), 'CompetitionsAdminsPage');
-const CanvasModerationPage = lazyNamed(() => import('./pages/CanvasModerationPage'), 'CanvasModerationPage');
 const DashboardPage = lazyNamed(() => import('./pages/DashboardPage'), 'DashboardPage');
 const DepartmentsPage = lazyNamed(() => import('./pages/DepartmentsPage'), 'DepartmentsPage');
 const EventsPage = lazyNamed(() => import('./pages/EventsPage'), 'EventsPage');
@@ -61,7 +60,6 @@ function AppRoutes() {
         <Route path="hods" element={<HodsPage />} />
         <Route path="competitions-admins" element={<CompetitionsAdminsPage />} />
         <Route path="events" element={<EventsPage />} />
-        <Route path="canvas-moderation" element={<CanvasModerationPage />} />
         <Route path="tech-pulse" element={<TechPulsePage />} />
         <Route path="daily-sparks" element={<DailySparksPage />} />
         <Route path="opening-spotlight" element={<OpeningSpotlightsPage />} />

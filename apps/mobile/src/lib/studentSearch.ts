@@ -1,14 +1,12 @@
 import type { CompetitionWithId, EventWithId } from '@campusflow/shared';
 
-import type { Doubt } from '@/src/lib/doubts';
-import { getCategoryMeta } from '@/src/lib/doubts';
 import { formatEventType } from '@/src/lib/events';
 
 export const STUDENT_SEARCH_MIN_LENGTH = 3;
 // Wait until the user has paused typing before showing search results.
 export const STUDENT_SEARCH_DEBOUNCE_MS = 700;
 
-export type StudentSearchResultType = 'doubt' | 'event' | 'competition';
+export type StudentSearchResultType = 'event' | 'competition';
 
 export interface StudentSearchResult {
   id: string;
@@ -26,18 +24,6 @@ function matchesAny(query: string, values: Array<string | undefined | null>): bo
   return values.some((value) => Boolean(value?.toLowerCase().includes(query)));
 }
 
-export function searchDoubts(doubts: Doubt[], query: string): Doubt[] {
-  const normalized = normalizeQuery(query);
-  if (normalized.length < STUDENT_SEARCH_MIN_LENGTH) return [];
-  return doubts.filter((doubt) => matchesAny(normalized, [
-    doubt.title,
-    doubt.context,
-    doubt.departmentName,
-    getCategoryMeta(doubt.category).label,
-    ...doubt.helpModes,
-  ]));
-}
-
 export function searchEvents(events: EventWithId[], query: string): EventWithId[] {
   const normalized = normalizeQuery(query);
   if (normalized.length < STUDENT_SEARCH_MIN_LENGTH) return [];
@@ -52,7 +38,6 @@ export function searchCompetitions(competitions: CompetitionWithId[], query: str
 
 export function buildStudentSearchResults(input: {
   query: string;
-  doubts: Doubt[];
   events: EventWithId[];
   competitions: CompetitionWithId[];
 }): StudentSearchResult[] {
@@ -60,9 +45,6 @@ export function buildStudentSearchResults(input: {
   if (normalized.length < STUDENT_SEARCH_MIN_LENGTH) return [];
   const results: StudentSearchResult[] = [];
 
-  for (const doubt of searchDoubts(input.doubts, input.query).slice(0, 7)) {
-    results.push({ id: `doubt-${doubt.id}`, type: 'doubt', title: doubt.title, subtitle: `${getCategoryMeta(doubt.category).label} · ${doubt.branchCount} branches`, route: `/(student)/doubts/${doubt.id}` });
-  }
   for (const event of searchEvents(input.events, input.query).slice(0, 5)) {
     results.push({ id: `event-${event.id}`, type: 'event', title: event.title, subtitle: formatEventType(event.type), route: `/(student)/events/${event.id}` });
   }
@@ -73,7 +55,6 @@ export function buildStudentSearchResults(input: {
 }
 
 export function getStudentSearchSectionLabel(type: StudentSearchResultType): string {
-  if (type === 'doubt') return 'Doubt Exchange';
   if (type === 'event') return 'Events & hackathons';
   return 'Competitions';
 }

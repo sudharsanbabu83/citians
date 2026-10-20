@@ -34,8 +34,6 @@ const HEADER_ROW_HEIGHT = 52;
 
 function getResultIcon(type: StudentSearchResultType): keyof typeof Ionicons.glyphMap {
   switch (type) {
-    case 'doubt':
-      return 'git-branch-outline';
     case 'event':
       return 'calendar-outline';
     case 'competition':
@@ -53,7 +51,7 @@ function StudentSearchResults({ topOffset }: { topOffset: number }) {
 
   const sectionedResults = useMemo(() => {
     const sections: Array<{ title: string; items: StudentSearchResult[] }> = [];
-    const types: StudentSearchResultType[] = ['doubt', 'event', 'competition'];
+    const types: StudentSearchResultType[] = ['event', 'competition'];
 
     for (const type of types) {
       const items = results.filter((item) => item.type === type);
@@ -92,7 +90,7 @@ function StudentSearchResults({ topOffset }: { topOffset: number }) {
           ) : sectionedResults.length === 0 ? (
             <View style={styles.centered}>
               <Text style={styles.emptyText}>No results for “{query.trim()}”</Text>
-              <Text style={styles.emptyCaption}>Try a doubt topic, event, or hackathon.</Text>
+              <Text style={styles.emptyCaption}>Try an event or hackathon.</Text>
             </View>
           ) : (
             <FlatList
@@ -159,7 +157,7 @@ export function StudentScreenHeader() {
               editable={Boolean(user)}
               value={query}
               onChangeText={setQuery}
-              placeholder="Search doubts, events, hackathons…"
+              placeholder="Search events, hackathons…"
             />
           </View>
           <Pressable

@@ -19,11 +19,7 @@ export function useSessionActivity(): void {
         ? 'Network Feed'
         : pathname.includes('network')
           ? 'Campus Network'
-          : pathname.includes('doubts') || pathname.includes('/build')
-            ? 'Doubt Exchange'
-            : pathname.includes('canvas')
-              ? 'Canvas'
-              : pathname.includes('leetcode')
+          : pathname.includes('leetcode')
                 ? 'Code Together'
                 : pathname.includes('resume-builder')
                   ? 'Resume Builder'

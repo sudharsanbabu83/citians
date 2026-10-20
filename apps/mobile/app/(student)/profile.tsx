@@ -4,7 +4,6 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { router, type Href } from 'expo-router';
 
 import { AppearanceSettings } from '@/src/components/AppearanceSettings';
-import { MascotSettings } from '@/src/components/MascotSettings';
 import { LogoutButton } from '@/src/components/LogoutButton';
 import { useBottomContentPadding } from '@/src/hooks/useBottomContentPadding';
 import { useThemedStyles } from '@/src/hooks/useThemedStyles';
@@ -72,7 +71,6 @@ export default function StudentProfileScreen() {
       </View>
 
       <AppearanceSettings />
-      <MascotSettings />
       <Pressable style={[styles.resumeButton, { backgroundColor: '#FFF0C2', borderColor: '#F6D982' }]} onPress={() => router.push('/(student)/resume-builder' as Href)}>
         <Ionicons name="document-text-outline" size={21} color="#D45772" />
         <View style={styles.focusButtonText}>

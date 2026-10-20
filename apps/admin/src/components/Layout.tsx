@@ -9,7 +9,6 @@ const navItems = [
   { to: '/hods', label: 'HODs' },
   { to: '/competitions-admins', label: 'Competitions Admins' },
   { to: '/events', label: 'Events' },
-  { to: '/canvas-moderation', label: 'Canvas Moderation' },
   { to: '/tech-pulse', label: 'Tech Pulse' },
   { to: '/daily-sparks', label: 'Daily Spark' },
   { to: '/opening-spotlight', label: 'Opening Spotlight' },

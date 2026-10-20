@@ -28,10 +28,6 @@ function getNotificationIcon(type: NotificationWithId['type']): keyof typeof Ion
   switch (type) {
     case 'EVENT_ANNOUNCEMENT':
       return 'radio-outline';
-    case 'CANVAS_MENTION':
-      return 'at-outline';
-    case 'CANVAS_REPLY':
-      return 'git-branch-outline';
     default:
       return 'notifications-outline';
   }
@@ -44,9 +40,6 @@ function getNotificationRoute(
   if (notification.entityType === 'eventAnnouncements' && role === 'STUDENT') {
     return `/(student)/events/${notification.entityId}/announcements` as Href;
   }
-  if (notification.entityType === 'canvasDrops' && role === 'STUDENT') {
-    return '/(student)/(tabs)/canvas' as Href;
-  }
   return null;
 }
 
@@ -58,6 +51,7 @@ export function NotificationsScreen() {
 
   const { data: notifications = [], isLoading, isError, refetch, isRefetching } =
     useNotifications(user?.uid);
+  const visibleNotifications = notifications.filter((notification) => notification.entityType !== 'canvasDrops');
   const markRead = useMarkNotificationRead(user?.uid);
   const bottomPadding = useBottomContentPadding();
 
@@ -104,7 +98,7 @@ export function NotificationsScreen() {
           ? [styles.emptyContainer, { paddingBottom: bottomPadding }]
           : [styles.listContent, { paddingBottom: bottomPadding }]
       }
-      data={notifications}
+      data={visibleNotifications}
       keyExtractor={(item) => item.id}
       refreshControl={
         <RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} />

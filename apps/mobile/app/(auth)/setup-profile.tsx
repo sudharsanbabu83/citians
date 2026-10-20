@@ -104,8 +104,7 @@ export default function SetupProfileScreen() {
           <Ionicons name="person-circle-outline" size={40} color={colors.secondary} />
           <Text style={styles.heroTitle}>Choose your username</Text>
           <Text style={styles.heroSubtitle}>
-            This is how you appear in campus spaces. Doubt Exchange adds a private alias too, so
-            asking for help never has to feel public.
+            This is how you appear in campus spaces. Choose something easy for classmates to recognize.
           </Text>
         </View>
 

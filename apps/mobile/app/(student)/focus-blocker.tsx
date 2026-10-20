@@ -124,10 +124,6 @@ export default function FocusBlockerScreen() {
           </View>
           <Text style={styles.waitSubtitle}>Keep learning inside Citians while your distractions stay blocked.</Text>
           <View style={styles.actionRow}>
-            <Pressable style={styles.actionButton} onPress={() => router.push('/(student)/(tabs)/build' as Href)}>
-              <Ionicons name="git-branch-outline" size={18} color={colors.primary} />
-              <Text style={styles.actionText}>Solve a doubt</Text>
-            </Pressable>
             <Pressable style={styles.actionButton} onPress={() => router.push('/(student)/(tabs)/competitions' as Href)}>
               <Ionicons name="trophy-outline" size={18} color={colors.primary} />
               <Text style={styles.actionText}>Practice</Text>
