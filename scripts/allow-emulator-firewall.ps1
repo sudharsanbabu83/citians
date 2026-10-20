@@ -3,7 +3,7 @@
 #   .\scripts\allow-emulator-firewall.ps1
 
 $ports = @(4001, 4400, 5005, 5050, 8085, 9095, 9195)
-$ruleName = 'CampusFlow Firebase Emulators'
+$ruleName = 'Citians Firebase Emulators'
 
 $existing = Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
 if ($existing) {

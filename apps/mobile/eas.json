@@ -14,6 +14,7 @@
         "simulator": true
       },
       "env": {
+        "EXPO_NO_METRO_WORKSPACE_ROOT": "1",
         "EXPO_PUBLIC_USE_EMULATORS": "true"
       }
     },
@@ -21,15 +22,24 @@
       "distribution": "internal",
       "node": "20.19.4",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "env": {
+          "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyB_4Dg1p2nr6agFJyA_aQdLUcWCRY1kN4o",
+          "EXPO_PUBLIC_FIREBASE_APP_ID": "1:1023799870586:android:3b83d7106f4ffd3b4c27c3"
+        }
+      },
+      "ios": {
+        "env": {
+          "EXPO_PUBLIC_FIREBASE_IOS_API_KEY": "AIzaSyC3ca05NyVPrRmxt5LeH7X0j2t8v15NaGA",
+          "EXPO_PUBLIC_FIREBASE_IOS_APP_ID": "1:1023799870586:ios:7c42bc0ae6d857934c27c3"
+        }
       },
       "env": {
-        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyB_4Dg1p2nr6agFJyA_aQdLUcWCRY1kN4o",
+        "EXPO_NO_METRO_WORKSPACE_ROOT": "1",
         "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "campusflow-f798c.firebaseapp.com",
         "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "campusflow-f798c",
         "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "campusflow-f798c.firebasestorage.app",
         "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "1023799870586",
-        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:1023799870586:android:3b83d7106f4ffd3b4c27c3",
         "EXPO_PUBLIC_USE_EMULATORS": "false",
         "EXPO_PUBLIC_COLLEGE_EMAIL_DOMAIN": "citchennai.net"
       }
@@ -38,15 +48,24 @@
       "autoIncrement": true,
       "node": "20.19.4",
       "android": {
-        "buildType": "apk"
+        "buildType": "app-bundle",
+        "env": {
+          "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyB_4Dg1p2nr6agFJyA_aQdLUcWCRY1kN4o",
+          "EXPO_PUBLIC_FIREBASE_APP_ID": "1:1023799870586:android:3b83d7106f4ffd3b4c27c3"
+        }
+      },
+      "ios": {
+        "env": {
+          "EXPO_PUBLIC_FIREBASE_IOS_API_KEY": "AIzaSyC3ca05NyVPrRmxt5LeH7X0j2t8v15NaGA",
+          "EXPO_PUBLIC_FIREBASE_IOS_APP_ID": "1:1023799870586:ios:7c42bc0ae6d857934c27c3"
+        }
       },
       "env": {
-        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyB_4Dg1p2nr6agFJyA_aQdLUcWCRY1kN4o",
+        "EXPO_NO_METRO_WORKSPACE_ROOT": "1",
         "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "campusflow-f798c.firebaseapp.com",
         "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "campusflow-f798c",
         "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "campusflow-f798c.firebasestorage.app",
         "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "1023799870586",
-        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:1023799870586:android:3b83d7106f4ffd3b4c27c3",
         "EXPO_PUBLIC_USE_EMULATORS": "false",
         "EXPO_PUBLIC_COLLEGE_EMAIL_DOMAIN": "citchennai.net"
       }

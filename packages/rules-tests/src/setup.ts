@@ -46,7 +46,7 @@ export function getTestEnv(): RulesTestEnvironment {
 }
 
 export function authedDb(uid: string): Firestore {
-  return getTestEnv().authenticatedContext(uid).firestore();
+  return getTestEnv().authenticatedContext(uid).firestore() as unknown as Firestore;
 }
 
 export function authedStorage(uid: string) {
@@ -54,7 +54,7 @@ export function authedStorage(uid: string) {
 }
 
 export function unauthedDb(): Firestore {
-  return getTestEnv().unauthenticatedContext().firestore();
+  return getTestEnv().unauthenticatedContext().firestore() as unknown as Firestore;
 }
 
 export function unauthedStorage() {
@@ -63,7 +63,7 @@ export function unauthedStorage() {
 
 export async function seed(ids: SeedIds): Promise<void> {
   await getTestEnv().withSecurityRulesDisabled(async (context) => {
-    await seedBaseData(context.firestore(), ids);
+    await seedBaseData(context.firestore() as unknown as Firestore, ids);
   });
 }
 

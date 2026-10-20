@@ -20,6 +20,9 @@ const region = 'asia-south1';
 
 const services = [
   'provisionuser',
+  'setuseraccountstatus',
+  'moderateworkpost',
+  'createofficialworkpost',
   'healthcheck',
   'submitodrequest',
   'approveodrequest',
@@ -30,6 +33,27 @@ const services = [
   'registerdevicetoken',
   'marknotificationread',
   'verifyodpass',
+  'createevent',
+  'updateevent',
+  'cancelevent',
+  'registerforevent',
+  'unregisterfromevent',
+  'approveeventregistration',
+  'rejecteventregistration',
+  'removeeventattendee',
+  'approvealleventregistrations',
+  'geteventticket',
+  'checkineventattendee',
+  'publisheventannouncement',
+  'acknowledgeeventannouncement',
+  'createcompetition',
+  'updatecompetition',
+  'cancelcompetition',
+  'claimusersession',
+  'refreshusersession',
+  'releaseusersession',
+  'reportclienterror',
+  'getsystemhealth',
 ];
 
 function run(command, commandArgs) {

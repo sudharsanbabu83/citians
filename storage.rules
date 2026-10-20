@@ -55,5 +55,25 @@ service firebase.storage {
         isValidFileType();
       allow delete: if isAuth() && (isAdmin() || isOwnerStudent(requestId));
     }
+
+    match /eventPosters/{userId}/{fileName} {
+      allow read: if isAuth() && userDoc().isActive == true;
+      allow write: if isAuth()
+        && request.auth.uid == userId
+        && request.resource.size <= 8 * 1024 * 1024
+        && request.resource.contentType.matches('image/png|image/jpeg|image/jpg');
+      allow delete: if isAuth() && request.auth.uid == userId;
+    }
+
+    match /canvasRooms/{roomId}/voice/{fileName} {
+      allow read: if isAuth() && userDoc().isActive == true;
+      allow write: if isAuth()
+        && userDoc().role == 'STUDENT'
+        && userDoc().isActive == true
+        && fileName.matches(request.auth.uid + '-.*')
+        && request.resource.size < 8 * 1024 * 1024
+        && request.resource.contentType.matches('audio/.*');
+      allow delete: if false;
+    }
   }
 }

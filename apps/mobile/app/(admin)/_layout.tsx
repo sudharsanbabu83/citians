@@ -1,22 +1,13 @@
 import { Stack } from 'expo-router';
 
-import { colors } from '@/src/theme';
+import { useLogoHeaderOptions } from '@/src/hooks/useLogoHeaderOptions';
 
 export default function AdminLayout() {
+  const headerOptions = useLogoHeaderOptions('Admin');
+
   return (
-    <Stack
-      screenOptions={{
-        headerStyle: { backgroundColor: colors.primary },
-        headerTintColor: colors.white,
-        headerTitleStyle: { fontWeight: '600' },
-      }}
-    >
-      <Stack.Screen
-        name="index"
-        options={{
-          title: 'Admin',
-        }}
-      />
+    <Stack screenOptions={{ ...headerOptions, animation: 'fade_from_bottom', animationDuration: 260, animationMatchesGesture: true }}>
+      <Stack.Screen name="index" options={{ title: 'Admin' }} />
     </Stack>
   );
 }

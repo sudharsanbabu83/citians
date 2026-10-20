@@ -11,7 +11,7 @@ import {
   FIREBASE_WEB_API_KEY,
   FIREBASE_WEB_APP_ID,
 } from '@campusflow/shared';
-import type { HealthCheckResponse } from '@campusflow/shared';
+import type { ActiveUserReportResponse, HealthCheckResponse, SystemHealthResponse } from '@campusflow/shared';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY ?? FIREBASE_WEB_API_KEY,
@@ -23,6 +23,7 @@ const firebaseConfig = {
 };
 
 const useEmulators = import.meta.env.VITE_USE_EMULATORS === 'true';
+const emulatorHost = import.meta.env.VITE_EMULATOR_HOST || 'localhost';
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
@@ -35,16 +36,26 @@ let emulatorsConnected = false;
 export function connectFirebaseEmulators(): void {
   if (emulatorsConnected || !useEmulators) return;
 
-  connectAuthEmulator(auth, 'http://localhost:9095', { disableWarnings: true });
-  connectFirestoreEmulator(db, 'localhost', 8085);
-  connectStorageEmulator(storage, 'localhost', 9195);
-  connectFunctionsEmulator(functions, 'localhost', 5005);
+  connectAuthEmulator(auth, `http://${emulatorHost}:9095`, { disableWarnings: true });
+  connectFirestoreEmulator(db, emulatorHost, 8085);
+  connectStorageEmulator(storage, emulatorHost, 9195);
+  connectFunctionsEmulator(functions, emulatorHost, 5005);
   emulatorsConnected = true;
 }
 
 export const healthCheckCallable = httpsCallable<undefined, HealthCheckResponse>(
   functions,
   'healthCheck'
+);
+
+export const getSystemHealthCallable = httpsCallable<undefined, SystemHealthResponse>(
+  functions,
+  'getSystemHealth'
+);
+
+export const getActiveUserReportCallable = httpsCallable<undefined, ActiveUserReportResponse>(
+  functions,
+  'getActiveUserReport'
 );
 
 export { httpsCallable };

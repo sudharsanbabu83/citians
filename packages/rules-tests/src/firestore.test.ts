@@ -1,5 +1,6 @@
 import { COLLECTIONS } from '@campusflow/shared';
 import { describe, it } from 'vitest';
+import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
 
 import { IDS } from './fixtures';
 import {
@@ -9,6 +10,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getTestEnv,
   seed,
   setDoc,
   unauthedDb,
@@ -337,7 +339,171 @@ describe('Firestore — notifications', () => {
   });
 });
 
+describe('Firestore — Doubt Exchange', () => {
+  const doubt = {
+    authorId: IDS.studentA,
+    authorAlias: 'Curious Fox',
+    departmentId: IDS.deptCse,
+    departmentName: 'CSE',
+    year: '2',
+    title: 'Why do databases need indexes?',
+    context: 'I understand searching, but I do not understand why an index makes it faster.',
+    category: 'TECH',
+    helpModes: ['EXPLAIN', 'EXAMPLE'],
+    urgency: 'STUCK',
+    status: 'OPEN',
+    branchCount: 0,
+    sessionSupporterIds: [],
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  it('lets a student launch their own anonymous doubt signal', async () => {
+    await seed(IDS);
+    await assertSucceeds(setDoc(doc(authedDb(IDS.studentA), 'doubts', 'doubt-a'), doubt));
+  });
+
+  it('rejects a student impersonating another doubt author', async () => {
+    await seed(IDS);
+    await assertFails(setDoc(doc(authedDb(IDS.studentB), 'doubts', 'doubt-a'), doubt));
+  });
+
+  it('supports legacy students whose user record predates isActive', async () => {
+    await seed(IDS);
+    await getTestEnv().withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), COLLECTIONS.USERS, IDS.studentA), {
+        uid: IDS.studentA,
+        name: 'Legacy Student',
+        email: 'legacy@citchennai.net',
+        role: 'STUDENT',
+      });
+    });
+    await assertSucceeds(setDoc(doc(authedDb(IDS.studentA), 'doubts', 'legacy-doubt'), doubt));
+  });
+
+  it('keeps explicitly deactivated students out of the exchange', async () => {
+    await seed(IDS);
+    await getTestEnv().withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(context.firestore(), COLLECTIONS.USERS, IDS.studentA), { isActive: false });
+    });
+    await assertFails(setDoc(doc(authedDb(IDS.studentA), 'doubts', 'blocked-doubt'), doubt));
+  });
+
+  it('allows another student to add a separate answer branch', async () => {
+    await seed(IDS);
+    await assertSucceeds(setDoc(doc(authedDb(IDS.studentA), 'doubts', 'doubt-a'), doubt));
+    await assertSucceeds(setDoc(doc(authedDb(IDS.studentB), 'doubtBranches', 'branch-b'), {
+      doubtId: 'doubt-a',
+      authorId: IDS.studentB,
+      authorAlias: 'Bright Owl',
+      departmentName: 'ECE',
+      angle: 'EXAMPLE',
+      body: 'A book index lets you jump to one topic instead of reading every page from the start.',
+      helpfulByUserIds: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+  });
+
+  it('lets a student add only their own session support', async () => {
+    await seed(IDS);
+    await assertSucceeds(setDoc(doc(authedDb(IDS.studentA), 'doubts', 'doubt-a'), doubt));
+    await assertSucceeds(updateDoc(doc(authedDb(IDS.studentB), 'doubts', 'doubt-a'), {
+      sessionSupporterIds: [IDS.studentB],
+      updatedAt: new Date(),
+    }));
+    await assertFails(updateDoc(doc(authedDb(IDS.studentB), 'doubts', 'doubt-a'), {
+      sessionSupporterIds: [IDS.studentB, IDS.admin],
+      updatedAt: new Date(),
+    }));
+  });
+});
+
+describe('Firestore — event broadcasts', () => {
+  async function seedBroadcast() {
+    await seed(IDS);
+    await getTestEnv().withSecurityRulesDisabled(async (context) => {
+      const adminDb = context.firestore();
+      await setDoc(doc(adminDb, COLLECTIONS.EVENTS, 'broadcast-event'), {
+        title: 'Broadcast event', status: 'PUBLISHED', organizerUserId: IDS.studentA,
+      });
+      await setDoc(doc(adminDb, COLLECTIONS.EVENT_ANNOUNCEMENTS, 'announcement-a'), {
+        eventId: 'broadcast-event', eventTitle: 'Broadcast event', organizerUserId: IDS.studentA,
+        organizerName: 'Host', message: 'Report fifteen minutes early.', priority: 'IMPORTANT',
+        audience: 'APPROVED', isPinned: true, recipientCount: 1, acknowledgedCount: 0,
+      });
+      await setDoc(doc(adminDb, COLLECTIONS.EVENT_ANNOUNCEMENT_RECEIPTS, `announcement-a_${IDS.studentB}`), {
+        announcementId: 'announcement-a', eventId: 'broadcast-event', userId: IDS.studentB,
+        isActive: true, readAt: null, acknowledgedAt: null,
+      });
+    });
+  }
+
+  it('allows the host and intended attendee to read a broadcast', async () => {
+    await seedBroadcast();
+    await assertSucceeds(getDoc(doc(authedDb(IDS.studentA), COLLECTIONS.EVENT_ANNOUNCEMENTS, 'announcement-a')));
+    await assertSucceeds(getDoc(doc(authedDb(IDS.studentB), COLLECTIONS.EVENT_ANNOUNCEMENTS, 'announcement-a')));
+  });
+
+  it('allows only the constrained host timeline and attendee receipt queries used by the app', async () => {
+    await seedBroadcast();
+    await assertSucceeds(getDocs(query(
+      collection(authedDb(IDS.studentA), COLLECTIONS.EVENT_ANNOUNCEMENTS),
+      where('eventId', '==', 'broadcast-event'),
+      where('organizerUserId', '==', IDS.studentA),
+      orderBy('createdAt', 'desc'),
+    )));
+    await assertSucceeds(getDocs(query(
+      collection(authedDb(IDS.studentB), COLLECTIONS.EVENT_ANNOUNCEMENT_RECEIPTS),
+      where('eventId', '==', 'broadcast-event'),
+      where('userId', '==', IDS.studentB),
+    )));
+    await assertFails(getDocs(query(
+      collection(authedDb(IDS.hod), COLLECTIONS.EVENT_ANNOUNCEMENT_RECEIPTS),
+      where('eventId', '==', 'broadcast-event'),
+      where('userId', '==', IDS.studentB),
+    )));
+  });
+
+  it('denies non-recipients and revoked recipients', async () => {
+    await seedBroadcast();
+    await assertFails(getDoc(doc(authedDb(IDS.hod), COLLECTIONS.EVENT_ANNOUNCEMENTS, 'announcement-a')));
+    await getTestEnv().withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(context.firestore(), COLLECTIONS.EVENT_ANNOUNCEMENT_RECEIPTS, `announcement-a_${IDS.studentB}`), { isActive: false });
+    });
+    await assertFails(getDoc(doc(authedDb(IDS.studentB), COLLECTIONS.EVENT_ANNOUNCEMENTS, 'announcement-a')));
+  });
+
+  it('prevents clients from publishing or forging acknowledgements', async () => {
+    await seedBroadcast();
+    await assertFails(setDoc(doc(authedDb(IDS.studentA), COLLECTIONS.EVENT_ANNOUNCEMENTS, 'forged'), {
+      eventId: 'broadcast-event', message: 'Forged', organizerUserId: IDS.studentA,
+    }));
+    await assertFails(updateDoc(doc(authedDb(IDS.studentB), COLLECTIONS.EVENT_ANNOUNCEMENT_RECEIPTS, `announcement-a_${IDS.studentB}`), { acknowledgedAt: new Date() }));
+  });
+});
+
 describe('Firestore — server-only collections', () => {
+  it('allows only admins to read mobile diagnostics and denies all client writes', async () => {
+    await seed(IDS);
+    await getTestEnv().withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), COLLECTIONS.CLIENT_ERROR_REPORTS, 'error-a'), {
+        userId: IDS.studentA,
+        feature: 'EVENT_TICKET',
+        message: 'Ticket failed',
+      });
+    });
+
+    await assertSucceeds(getDoc(doc(authedDb(IDS.admin), COLLECTIONS.CLIENT_ERROR_REPORTS, 'error-a')));
+    await assertFails(getDoc(doc(authedDb(IDS.studentA), COLLECTIONS.CLIENT_ERROR_REPORTS, 'error-a')));
+    await assertFails(setDoc(doc(authedDb(IDS.admin), COLLECTIONS.CLIENT_ERROR_REPORTS, 'forged'), {
+      userId: IDS.studentA,
+      feature: 'UNKNOWN',
+      message: 'Forged',
+    }));
+  });
+
   it('allows admin to read audit logs', async () => {
     await seed(IDS);
     await assertSucceeds(getDoc(doc(authedDb(IDS.admin), COLLECTIONS.AUDIT_LOGS, IDS.auditLog)));

@@ -34,7 +34,7 @@ export async function registerForPushNotifications(userId: string): Promise<void
   if (isExpoGo()) {
     if (__DEV__) {
       console.log(
-        '[CampusFlow] Push skipped in Expo Go. In-app notifications still work; use a Dev Client build for FCM.'
+        '[Citians] Push skipped in Expo Go. In-app notifications still work; use a Dev Client build for FCM.'
       );
     }
     return;
@@ -43,7 +43,7 @@ export async function registerForPushNotifications(userId: string): Promise<void
   const Device = await import('expo-device');
   if (!Device.isDevice) {
     if (__DEV__) {
-      console.log('[CampusFlow] Push registration skipped on simulator/emulator.');
+      console.log('[Citians] Push registration skipped on simulator/emulator.');
     }
     return;
   }
@@ -70,7 +70,7 @@ export async function registerForPushNotifications(userId: string): Promise<void
 
   if (finalStatus !== 'granted') {
     if (__DEV__) {
-      console.log('[CampusFlow] Push permission not granted.');
+      console.log('[Citians] Push permission not granted.');
     }
     return;
   }
@@ -80,18 +80,18 @@ export async function registerForPushNotifications(userId: string): Promise<void
     const tokenResult = await Notifications.getDevicePushTokenAsync();
     pushToken = tokenResult.data;
     if (__DEV__) {
-      console.log(`[CampusFlow] Native push token (${tokenResult.type}) acquired.`);
+      console.log(`[Citians] Native push token (${tokenResult.type}) acquired.`);
     }
   } catch (err) {
     if (__DEV__) {
-      console.log('[CampusFlow] Could not get native push token:', (err as Error).message);
+      console.log('[Citians] Could not get native push token:', (err as Error).message);
     }
     return;
   }
 
   if (pushToken.startsWith('ExponentPushToken')) {
     if (__DEV__) {
-      console.log('[CampusFlow] Unexpected Expo push token; native FCM/APNs token required.');
+      console.log('[Citians] Unexpected Expo push token; native FCM/APNs token required.');
     }
     return;
   }
@@ -109,6 +109,6 @@ export async function registerForPushNotifications(userId: string): Promise<void
   });
 
   if (__DEV__) {
-    console.log('[CampusFlow] Device token registered for notifications.');
+    console.log('[Citians] Device token registered for notifications.');
   }
 }

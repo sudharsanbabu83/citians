@@ -18,7 +18,7 @@ function isPushEnabled(): boolean {
   return process.env.FUNCTIONS_EMULATOR !== 'true';
 }
 
-async function sendPushToUser(userId: string, title: string, body: string): Promise<void> {
+export async function sendPushToUser(userId: string, title: string, body: string): Promise<void> {
   if (!isPushEnabled()) {
     logger.debug('Skipping FCM push in emulator', { userId });
     return;

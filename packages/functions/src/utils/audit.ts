@@ -12,8 +12,10 @@ export interface AuditLogEntry {
 }
 
 export async function writeAuditLog(entry: AuditLogEntry): Promise<string> {
+  const { metadata, ...baseEntry } = entry;
   const ref = await db.collection(COLLECTIONS.AUDIT_LOGS).add({
-    ...entry,
+    ...baseEntry,
+    ...(metadata === undefined ? {} : { metadata }),
     createdAt: FieldValue.serverTimestamp(),
   });
   return ref.id;

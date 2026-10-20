@@ -12,7 +12,7 @@ export function HodsPage() {
   const [form, setForm] = useState({
     email: '',
     name: '',
-    password: 'password123',
+    password: '',
     departmentId: 'cse',
     designation: 'Head of Department',
   });
@@ -30,12 +30,18 @@ export function HodsPage() {
   const userMap = new Map(users.map((u) => [u.uid, u]));
 
   const createMutation = useMutation({
-    mutationFn: () =>
-      provisionUser({
+    mutationFn: () => {
+      const payload = {
         ...form,
-        role: 'HOD',
+        role: 'HOD' as const,
         phone: '',
-      }),
+      };
+      if (!payload.password.trim()) {
+        const { password: _password, ...rest } = payload;
+        return provisionUser(rest);
+      }
+      return provisionUser(payload);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hods'] });
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -86,8 +92,12 @@ export function HodsPage() {
                 <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
               </div>
               <div className="form-field">
-                <label>Password</label>
-                <input value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+                <label>Password (optional)</label>
+                <input
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  placeholder="Leave blank — HOD completes registration in the app"
+                />
               </div>
               <div className="form-field">
                 <label>Department ID</label>

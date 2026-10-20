@@ -1,45 +1,27 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
-import { useTabBarStyle } from '@/src/hooks/useTabBarStyle';
-import { colors } from '@/src/theme';
+import { AppHeaderLogo } from '@/src/components/AppHeaderLogo';
+import { AnimatedTabIcon } from '@/src/components/AnimatedTabIcon';
+import { useNavigationTheme } from '@/src/hooks/useNavigationTheme';
 
 export default function HodTabLayout() {
-  const tabBarStyle = useTabBarStyle();
+  const nav = useNavigationTheme();
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle,
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600',
-        },
-        headerStyle: { backgroundColor: colors.primary },
-        headerTintColor: colors.white,
-        headerTitleStyle: { fontWeight: '700', fontSize: 18 },
-        headerShadowVisible: false,
-      }}
-    >
+    <Tabs screenOptions={{ ...nav, headerShown: true, headerLeft: () => <AppHeaderLogo size={28} />, animation: 'shift', transitionSpec: { animation: 'timing', config: { duration: 230 } } }}>
       <Tabs.Screen
         name="index"
         options={{
           title: 'Dashboard',
           headerTitle: 'HOD Dashboard',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="clipboard" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size, focused }) => <AnimatedTabIcon name="clipboard" size={size} color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size, focused }) => <AnimatedTabIcon name="person-circle" size={size} color={color} focused={focused} />,
         }}
       />
     </Tabs>

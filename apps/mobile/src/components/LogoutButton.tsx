@@ -3,10 +3,15 @@ import { router } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { Alert, Pressable, StyleSheet, Text } from 'react-native';
 
+import { useThemedStyles } from '@/src/hooks/useThemedStyles';
+import { useTheme } from '@/src/hooks/useTheme';
 import { useAuthStore } from '@/src/lib/authStore';
-import { borderRadius, colors, shadows, spacing } from '@/src/theme';
+import type { AppTheme } from '@/src/lib/themeStore';
+import { borderRadius, spacing } from '@/src/theme';
 
 export function LogoutButton() {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const signOut = useAuthStore((s) => s.signOut);
   const queryClient = useQueryClient();
 
@@ -26,26 +31,28 @@ export function LogoutButton() {
   };
 
   return (
-    <Pressable style={[styles.button, shadows.card]} onPress={handleLogout}>
-      <Ionicons name="log-out-outline" size={20} color={colors.error} />
+    <Pressable style={[styles.button, styles.cardShadow]} onPress={handleLogout}>
+      <Ionicons name="log-out-outline" size={20} color={colors.textMuted} />
       <Text style={styles.label}>Sign out</Text>
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.error,
-  },
-});
+const createStyles = (theme: AppTheme) =>
+  StyleSheet.create({
+    button: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.sm,
+      backgroundColor: theme.colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+    },
+    cardShadow: theme.shadows.card,
+    label: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.colors.textMuted,
+    },
+  });

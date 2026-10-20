@@ -10,7 +10,7 @@ import type { Notification } from '@campusflow/shared';
 import { COLLECTIONS } from '@campusflow/shared';
 
 import { db } from '@/src/config/firebase';
-import { toDate } from '@/src/lib/odRequests';
+import { toDate } from '@/src/lib/dates';
 
 export interface NotificationWithId extends Notification {
   id: string;

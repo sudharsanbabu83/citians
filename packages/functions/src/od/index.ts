@@ -113,6 +113,13 @@ export const submitODRequest = onCall(callableOptions, async (request) => {
     throw new HttpsError('invalid-argument', 'End date must be on or after start date.');
   }
 
+  if (input.endDate === input.startDate && input.endTime < input.startTime) {
+    throw new HttpsError(
+      'invalid-argument',
+      'End time must be on or after start time on the same day.'
+    );
+  }
+
   const student = await loadStudentProfile(auth.uid);
   const hodUserId = await resolveHodUserId(student.departmentId);
 
@@ -157,6 +164,9 @@ export const submitODRequest = onCall(callableOptions, async (request) => {
       }
     }
 
+    // For existing requests we use `transaction.update()` (FieldValue.delete() is allowed).
+    // For new requests we use `transaction.set()` (FieldValue.delete() is NOT allowed),
+    // so we must omit those fields on the create path.
     const updateData: Record<string, unknown> = {
       studentId: student.userId,
       studentUserId: auth.uid,
@@ -169,12 +179,12 @@ export const submitODRequest = onCall(callableOptions, async (request) => {
       location: input.location,
       startDate: input.startDate,
       endDate: input.endDate,
+      startTime: input.startTime,
+      endTime: input.endTime,
       reason: input.reason,
       status: 'PENDING_HOD_REVIEW',
       submittedAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
-      rejectionReason: FieldValue.delete(),
-      changeComment: FieldValue.delete(),
     };
 
     if (!input.requestId) {
@@ -182,6 +192,9 @@ export const submitODRequest = onCall(callableOptions, async (request) => {
       updateData.reviewedAt = null;
       transaction.set(requestRef, updateData);
     } else {
+      // Clear rejection/change fields when transitioning from DRAFT/CHANGES_REQUESTED.
+      updateData.rejectionReason = FieldValue.delete();
+      updateData.changeComment = FieldValue.delete();
       transaction.update(requestRef, updateData);
     }
   });

@@ -1,17 +1,17 @@
-# CampusFlow
+# Citians
 
-Production-ready college workflow management platform. CampusFlow starts with **On-Duty (OD) request management** and is architected to expand into leave requests, bonafide certificates, internship approvals, and more.
+Production-ready college workflow management platform. Citians starts with **On-Duty (OD) request management** and is architected to expand into leave requests, bonafide certificates, internship approvals, and more.
 
 ## Architecture
 
-CampusFlow uses a **Firebase-first, client-read / server-write** security model:
+Citians uses a **Firebase-first, client-read / server-write** security model:
 
 - **Mobile app** (Expo + React Native) — students and HODs
 - **Admin dashboard** (Vite + React) — deployed to Firebase Hosting
 - **Cloud Functions** (TypeScript) — all sensitive mutations
 - **Cloud Firestore** — primary database
 - **Cloud Storage** — proof document uploads
-- **Firebase Auth** — email/password authentication
+- **Firebase Auth** — college email + password (self-registration with anonymous username)
 - **FCM** — push notifications (Phase 7)
 
 Sensitive actions (submit, approve, reject, pass generation, QR verification, audit logs) are **never** performed via direct client Firestore writes.
@@ -50,7 +50,7 @@ campusflow/
 ### 1. Create a Firebase project
 
 1. Go to [Firebase Console](https://console.firebase.google.com)
-2. Click **Add project** → display name **Campusflow**, project ID **`campusflow-f798c`** (or your chosen ID — update `.firebaserc` and `packages/shared/src/constants/firebase.ts`)
+2. Click **Add project** → display name **Citians**, project ID **`campusflow-f798c`** (or your chosen ID — update `.firebaserc` and `packages/shared/src/constants/firebase.ts`)
 3. Enable Google Analytics (optional)
 
 ### 2. Enable services
@@ -140,29 +140,15 @@ Emulator UI: **http://127.0.0.1:4001**
 
 > Ports were set to avoid conflicts with other local services. If a port is taken, update `firebase.json` and the emulator connection code in `apps/admin/src/config/firebase.ts` and `apps/mobile/src/config/firebase.ts`.
 
-### Seed emulator data (optional)
-
-With emulators running:
-
-```powershell
-cd packages\functions
-npm run seed
-```
-
-This creates test accounts for Phase 2 auth (password for all: `password123`):
-
-| Email | Role |
-|-------|------|
-| `arjunb1.cse2024@citchennai.net` | STUDENT |
-| `meerab1.cse2024@citchennai.net` | STUDENT |
-| `hod.cse@citchennai.net` | HOD |
-| `admin.campusflow@citchennai.net` | ADMIN |
-
 Only `@citchennai.net` emails are accepted at login (e.g. `sudharsanb1.cse2024@citchennai.net`).
 
-The seed script also creates **6 sample OD requests** for dashboard testing:
-- Arjun (`arjunb1.cse2024@citchennai.net`): 1 approved, 2 pending, 1 rejected, 1 changes requested, 1 draft
-- Meera (`meerab1.cse2024@citchennai.net`): 1 pending review
+**Student accounts (mobile):**
+
+1. Open the app and tap **First time here? Create an account**
+2. Use your `@citchennai.net` college email and choose a **username** (shown publicly on the Build Board for anonymity)
+3. Sign in anytime with email + password
+
+Admin can still provision students from the dashboard; if no password is set, the student completes registration on the app.
 
 **Dashboard stat mapping:**
 - **Approved** → `APPROVED`
@@ -191,7 +177,7 @@ cd apps\mobile
 npx expo start
 ```
 
-> **Important:** Do not run `npx expo start` from the monorepo root without `npm run dev:mobile` — it will not load the CampusFlow app correctly.
+> **Important:** Do not run `npx expo start` from the monorepo root without `npm run dev:mobile` — it will not load the Citians app correctly.
 
 Press `w` for web, or scan the QR code with **Expo Go** (update to the latest version from the Play Store / App Store).
 
@@ -284,11 +270,11 @@ Update `app.config.ts` with your EAS project ID from `eas init`.
 
 ## Phase 10 Verification Checklist
 
-Deploy CampusFlow to Firebase (`campusflow-f798c`) and ship mobile via EAS.
+Deploy Citians to Firebase (`campusflow-f798c`) and ship mobile via EAS.
 
 ### One-time Firebase setup
 
-- [ ] Firebase project **Campusflow** (`campusflow-f798c`) on Blaze plan
+- [ ] Firebase project **Citians** (`campusflow-f798c`) on Blaze plan
 - [ ] Enable Auth (Email/Password), Firestore, Storage, Hosting, Cloud Messaging
 - [ ] Register web app (admin), Android + iOS apps (`com.campusflow.app`)
 - [ ] Download `google-services.json` → `apps/mobile/` (gitignored)
@@ -345,6 +331,15 @@ eas build --profile production --platform android
 - [ ] Firebase budget alerts
 - [ ] Firestore composite indexes deployed (`firestore.indexes.json`)
 
+### Active user report
+
+The admin dashboard includes **Active Users** at `/active-users`. It refreshes every 30 seconds and lists signed-in users whose app heartbeat was received within the last two minutes, including their current feature, route, device, platform, app version, and last-seen time. The mobile app sends a heartbeat every 45 seconds while it is in the foreground. Deploy both the Functions and Hosting targets after enabling this report:
+
+```powershell
+npm run deploy:functions
+npm run deploy:hosting
+```
+
 ## Phase 9 Verification Checklist
 
 Automated Firestore + Storage rules tests using `@firebase/rules-unit-testing`.
@@ -371,7 +366,7 @@ Admin web app at `http://localhost:5173` — departments, users, OD overview, pa
 
 - [ ] `npm run build:functions` succeeds
 - [ ] `npm run build:admin` succeeds
-- [ ] Admin login with `admin.campusflow@citchennai.net` / `password123` (emulator seed)
+- [ ] Admin login with an administrator account you created
 - [ ] **Dashboard** shows department, student, request, and pass counts
 - [ ] **Departments** — create/update department, toggle active status
 - [ ] **Students** — list students, **Add student** via `provisionUser` callable
@@ -407,7 +402,6 @@ Flow: **HOD approves → pass generated → student shows QR → HOD scans & ver
 
 - [ ] `npm run build:functions` succeeds
 - [ ] HOD **Approve** creates `odPasses` doc + `odPassSecrets` entry
-- [ ] Seed includes pass for `od-seed-001` (Arjun's approved SIH request)
 - [ ] Student opens approved request → **View Digital OD Pass** → QR displays
 - [ ] HOD **Scan OD Pass** reads QR and shows **Valid OD Pass** with student details
 - [ ] Invalid/wrong token returns `INVALID`; expired end date returns `EXPIRED`
@@ -420,7 +414,7 @@ Flow: **HOD approves → pass generated → student shows QR → HOD scans & ver
 HOD flow: **View pending → Review details → Approve / Reject / Request changes** (all via Cloud Functions).
 
 - [ ] `npm run build:functions` succeeds
-- [ ] HOD login (`hod.cse@citchennai.net`) shows pending count and request list (2 from seed)
+- [ ] HOD login shows pending count and request list for its assigned department
 - [ ] Tapping a pending request opens review screen with student name and documents
 - [ ] **Approve** sets status `APPROVED` and writes `OD_APPROVED` audit log
 - [ ] **Reject** requires reason → status `REJECTED`, student sees rejection reason
@@ -440,24 +434,22 @@ Student flow: **Apply → Save Draft → Upload docs → Submit** (submit always
 - [ ] Upload PDF/image attaches to request (Storage + Firestore `documents` subcollection)
 - [ ] **Submit for Review** calls `submitODRequest` → status becomes `PENDING_HOD_REVIEW`
 - [ ] Dashboard pending count updates after submit
-- [ ] Arjun's `CHANGES_REQUESTED` seed request (`od-seed-004`) can be edited and resubmitted
+- [ ] A request with `CHANGES_REQUESTED` can be edited and resubmitted
 - [ ] Audit log entry `OD_SUBMITTED` appears in emulator `auditLogs`
 - [ ] HOD approve/reject NOT implemented yet (Phase 5)
 - [ ] `npm run typecheck` passes in `apps/mobile`
 
 ## Phase 3 Verification Checklist
 
-- [ ] `npm run seed` creates sample `odRequests` documents
 - [ ] Student login shows live approved/pending/rejected counts (not hardcoded zeros)
-- [ ] Recent activity lists seeded requests with status badges
+- [ ] Recent activity lists actual requests with status badges
 - [ ] Tapping a request opens read-only detail screen
 - [ ] Pull-to-refresh updates dashboard data
-- [ ] HOD login shows live pending review count (2 from seed)
+- [ ] HOD login shows a live pending review count
 - [ ] `npm run typecheck` passes in `apps/mobile`
 
 ## Phase 2 Verification Checklist
 
-- [ ] `npm run seed` creates Auth users and Firestore profiles
 - [ ] Unauthenticated users are redirected to `/login`
 - [ ] `arjunb1.cse2024@citchennai.net` → student Home + Profile with real data
 - [ ] `hod.cse@citchennai.net` → HOD dashboard + profile
@@ -524,4 +516,4 @@ See **Phase 10 Verification Checklist** above for the full pilot runbook.
 
 ## License
 
-Private — CampusFlow college workflow platform.
+Private — Citians college workflow platform.

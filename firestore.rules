@@ -24,7 +24,11 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isActiveUser() && userRole() == 'ADMIN';
+      return isActiveUser() && userRole() in ['ADMIN', 'SUPER_ADMIN'];
+    }
+
+    function isSuperAdmin() {
+      return isActiveUser() && userRole() == 'SUPER_ADMIN';
     }
 
     function isHod() {
@@ -33,6 +37,20 @@ service cloud.firestore {
 
     function isStudent() {
       return isActiveUser() && userRole() == 'STUDENT';
+    }
+
+    // Doubt Exchange also supports student accounts created before `isActive`
+    // became mandatory. Requiring both profile documents prevents auth-only
+    // accounts from participating, while an explicit deactivation still wins.
+    function canUseDoubtExchange() {
+      return isAuth()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && exists(/databases/$(database)/documents/students/$(request.auth.uid))
+        && (!('isActive' in userDoc()) || userDoc().isActive == true);
+    }
+
+    function isCompetitionsAdmin() {
+      return isActiveUser() && userRole() == 'COMPETITIONS_ADMIN';
     }
 
     function hodDepartmentId() {
@@ -70,12 +88,25 @@ service cloud.firestore {
         isAdmin() ||
         isStudentInHodDepartment(userId)
       );
-      allow create: if isAdmin();
-      allow update: if isAdmin() || (
+      // A normal admin can manage ordinary accounts, but cannot create,
+      // promote, deactivate, or alter a Super Admin account from the client.
+      allow create: if isSuperAdmin() || (isAdmin() && request.resource.data.role != 'SUPER_ADMIN');
+      allow update: if isSuperAdmin() || (
+        isAdmin() &&
+        resource.data.role != 'SUPER_ADMIN' &&
+        request.resource.data.role == resource.data.role
+      ) || (
         isAuth() &&
         request.auth.uid == userId &&
         request.resource.data.role == resource.data.role &&
-        request.resource.data.isActive == resource.data.isActive
+        request.resource.data.isActive == resource.data.isActive &&
+        request.resource.data.email == resource.data.email &&
+        (
+          !('usernameLower' in resource.data) ||
+          resource.data.usernameLower == '' ||
+          resource.data.usernameLower == request.resource.data.usernameLower
+        ) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['username', 'usernameLower', 'updatedAt'])
       );
       allow delete: if isAdmin();
     }
@@ -105,7 +136,7 @@ service cloud.firestore {
     // departments
     // -------------------------------------------------------------------------
     match /departments/{departmentId} {
-      allow read: if isAuth();
+      allow read: if true;
       allow write: if isAdmin();
     }
 
@@ -213,6 +244,492 @@ service cloud.firestore {
     match /verificationLogs/{logId} {
       allow read: if isAdmin();
       allow write: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // events — client read, server write
+    // -------------------------------------------------------------------------
+    match /events/{eventId} {
+      allow read: if resource.data.status == 'PUBLISHED' || isAdmin() || (
+        isActiveUser() && (
+          resource.data.organizerUserId == request.auth.uid ||
+          (isHod() && resource.data.departmentId == hodDepartmentId()) ||
+          (isHod() && resource.data.departmentId == null)
+        )
+      );
+      allow write: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // eventRegistrations — client read own/organizer, server write
+    // -------------------------------------------------------------------------
+    match /eventRegistrations/{registrationId} {
+      allow read: if isAdmin() || (
+        isActiveUser() && (
+          resource.data.userId == request.auth.uid ||
+          get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.organizerUserId == request.auth.uid
+        )
+      );
+      allow write: if false;
+    }
+
+    // Event broadcasts are written by trusted Cloud Functions. Each recipient
+    // gets a deterministic receipt that acts as their read capability.
+    match /eventAnnouncements/{announcementId} {
+      allow read: if isAdmin() || (
+        isActiveUser() && (
+          resource.data.organizerUserId == request.auth.uid ||
+          (
+            exists(/databases/$(database)/documents/eventAnnouncementReceipts/$(announcementId + '_' + request.auth.uid)) &&
+            get(/databases/$(database)/documents/eventAnnouncementReceipts/$(announcementId + '_' + request.auth.uid)).data.isActive == true
+          )
+        )
+      );
+      allow write: if false;
+    }
+
+    match /eventAnnouncementReceipts/{receiptId} {
+      allow read: if isAdmin() || (
+        isActiveUser() && (
+          resource.data.userId == request.auth.uid ||
+          get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.organizerUserId == request.auth.uid
+        )
+      );
+      allow write: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // userSessions — server-managed active login sessions (one device at a time)
+    // -------------------------------------------------------------------------
+    match /userSessions/{userId} {
+      allow read: if isAuth() && request.auth.uid == userId;
+      allow write: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // competitions — client read, server write
+    // -------------------------------------------------------------------------
+    match /competitions/{competitionId} {
+      allow read: if resource.data.status == 'PUBLISHED' || isAdmin() || isCompetitionsAdmin();
+      allow write: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // workPosts — student build board (share what you're working on)
+    // -------------------------------------------------------------------------
+    match /workPosts/{postId} {
+      function isWorkPostOwner() {
+        return isAuth() && resource.data.studentUserId == request.auth.uid;
+      }
+
+      function isValidWorkPostCreate() {
+        let data = request.resource.data;
+        return data.studentUserId == request.auth.uid
+          && data.title is string && data.title.size() >= 3 && data.title.size() <= 80
+          && data.description is string && data.description.size() >= 10 && data.description.size() <= 500
+          && data.isActive == true
+          && (!('experimentId' in data) || (data.experimentId is string && data.experimentId.size() <= 40))
+          && data.likedByUserIds is list
+          && data.likedByUserIds.size() == 0;
+      }
+
+      function isOwnerWorkPostUpdate() {
+        return isWorkPostOwner()
+          && request.resource.data.studentUserId == resource.data.studentUserId
+          && request.resource.data.likedByUserIds == resource.data.likedByUserIds
+          // A student can archive their own post, but cannot reactivate a post
+          // that a Super Admin has removed for moderation.
+          && (request.resource.data.isActive == resource.data.isActive ||
+            (resource.data.isActive == true && request.resource.data.isActive == false));
+      }
+
+      function isHypeToggleUpdate() {
+        let changedKeys = request.resource.data.diff(resource.data).affectedKeys();
+        return changedKeys.hasOnly(['likedByUserIds', 'updatedAt'])
+          && request.resource.data.studentUserId == resource.data.studentUserId
+          && request.resource.data.title == resource.data.title
+          && request.resource.data.description == resource.data.description
+          && request.resource.data.isActive == resource.data.isActive;
+      }
+
+      allow read: if resource.data.isActive == true;
+      allow create: if isStudent() && isValidWorkPostCreate();
+      allow update: if isStudent() && (isOwnerWorkPostUpdate() || isHypeToggleUpdate());
+      allow delete: if isStudent() && isWorkPostOwner();
+    }
+
+    match /techPulse/{postId} {
+      allow read: if isActiveUser() && resource.data.published == true;
+      allow write: if isAdmin();
+    }
+
+    match /dailySparks/{sparkId} {
+      allow read: if isActiveUser() && resource.data.published == true;
+      allow write: if isAdmin();
+    }
+
+    match /openingSpotlights/{spotlightId} {
+      allow read: if isAdmin() || (isActiveUser() && resource.data.published == true);
+      allow write: if isAdmin();
+    }
+
+    // -------------------------------------------------------------------------
+    // Student networking — public college profile, connections and messaging
+    // -------------------------------------------------------------------------
+    function acceptedRequestExists(stringA, stringB) {
+      return exists(/databases/$(database)/documents/connectionRequests/$(stringA + '__' + stringB))
+        && getAfter(/databases/$(database)/documents/connectionRequests/$(stringA + '__' + stringB)).data.status == 'ACCEPTED'
+        || exists(/databases/$(database)/documents/connectionRequests/$(stringB + '__' + stringA))
+        && getAfter(/databases/$(database)/documents/connectionRequests/$(stringB + '__' + stringA)).data.status == 'ACCEPTED';
+    }
+
+    match /networkProfiles/{userId} {
+      function validNetworkProfile() {
+        let data = request.resource.data;
+        return data.userId == request.auth.uid
+          && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120
+          && data.username is string && data.username.size() >= 1 && data.username.size() <= 40
+          && data.departmentId is string && data.departmentName is string
+          && data.year is string && data.section is string
+          && data.bio is string && data.bio.size() <= 240
+          && data.skills is list && data.skills.size() <= 10
+          && data.interests is list && data.interests.size() <= 10
+          && data.visibility in ['COLLEGE_ONLY', 'PRIVATE'];
+      }
+
+      // A student must be able to read their own profile path even before the
+      // first profile document exists; `resource.data` is unavailable for a
+      // missing document. Other students only see college-visible profiles.
+      allow read: if isActiveUser() && (userId == request.auth.uid || resource.data.visibility == 'COLLEGE_ONLY');
+      allow create: if isStudent() && request.auth.uid == userId && validNetworkProfile();
+      allow update: if isStudent() && request.auth.uid == userId && validNetworkProfile();
+      allow delete: if isStudent() && request.auth.uid == userId;
+    }
+
+    match /connectionRequests/{requestId} {
+      allow read: if isActiveUser() && (resource.data.requesterId == request.auth.uid || resource.data.recipientId == request.auth.uid);
+      allow create: if isStudent()
+        && request.resource.data.requesterId == request.auth.uid
+        && request.resource.data.recipientId != request.auth.uid
+        && request.resource.data.status == 'PENDING';
+      allow update: if isStudent()
+        && ((resource.data.recipientId == request.auth.uid && request.resource.data.status in ['ACCEPTED', 'REJECTED'])
+          || (resource.data.requesterId == request.auth.uid && request.resource.data.status == 'CANCELLED'))
+        && request.resource.data.requesterId == resource.data.requesterId
+        && request.resource.data.recipientId == resource.data.recipientId;
+      allow delete: if isStudent() && (resource.data.requesterId == request.auth.uid || resource.data.recipientId == request.auth.uid);
+    }
+
+    match /connections/{connectionId} {
+      allow read: if isActiveUser() && request.auth.uid in resource.data.userIds;
+      allow create: if isStudent()
+        && request.auth.uid in request.resource.data.userIds
+        && request.resource.data.userIds.size() == 2
+        && acceptedRequestExists(request.resource.data.userIds[0], request.resource.data.userIds[1]);
+      allow update: if isStudent() && request.auth.uid in resource.data.userIds;
+      allow delete: if isStudent() && request.auth.uid in resource.data.userIds;
+    }
+
+    match /blockedUsers/{blockId} {
+      allow read: if isStudent() && resource.data.blockerId == request.auth.uid;
+      allow create: if isStudent() && request.resource.data.blockerId == request.auth.uid && request.resource.data.blockedId != request.auth.uid;
+      allow delete: if isStudent() && resource.data.blockerId == request.auth.uid;
+      allow update: if false;
+    }
+
+    match /profileReports/{reportId} {
+      allow read: if isAdmin() || (isStudent() && resource.data.reporterId == request.auth.uid);
+      allow create: if isStudent() && request.resource.data.reporterId == request.auth.uid && request.resource.data.targetUserId != request.auth.uid;
+      allow update: if isAdmin();
+      allow delete: if isAdmin() || (isStudent() && resource.data.reporterId == request.auth.uid);
+    }
+
+    match /networkConversations/{conversationId} {
+      function validConversation() {
+        return request.resource.data.memberIds is list
+          && request.resource.data.memberIds.size() == 2
+          && request.auth.uid in request.resource.data.memberIds
+          && acceptedRequestExists(request.resource.data.memberIds[0], request.resource.data.memberIds[1]);
+      }
+
+      allow read: if isActiveUser() && request.auth.uid in resource.data.memberIds;
+      allow create: if isStudent() && validConversation();
+      allow update: if isStudent() && request.auth.uid in resource.data.memberIds
+        && request.resource.data.memberIds == resource.data.memberIds;
+      allow delete: if false;
+    }
+
+    match /networkConversations/{conversationId}/networkMessages/{messageId} {
+      function conversationMember() {
+        return isStudent()
+          && exists(/databases/$(database)/documents/networkConversations/$(conversationId))
+          && request.auth.uid in getAfter(/databases/$(database)/documents/networkConversations/$(conversationId)).data.memberIds;
+      }
+
+      allow read: if conversationMember();
+      allow create: if conversationMember() && request.resource.data.senderId == request.auth.uid
+        && request.resource.data.body is string && request.resource.data.body.size() >= 1 && request.resource.data.body.size() <= 1000;
+      allow update, delete: if false;
+    }
+
+    match /networkPosts/{postId} {
+      function validNetworkPostCreate() {
+        let data = request.resource.data;
+        return data.authorId == request.auth.uid
+          && data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 120
+          && data.type in ['PROJECT', 'ACHIEVEMENT', 'INTERNSHIP', 'RESOURCE', 'UPDATE']
+          && data.title is string && data.title.size() >= 3 && data.title.size() <= 120
+          && data.body is string && data.body.size() >= 10 && data.body.size() <= 1500
+          && data.tags is list && data.tags.size() <= 5
+          && data.likedByUserIds is list && data.likedByUserIds.size() == 0
+          && data.commentCount == 0 && data.flagCount == 0 && data.isActive == true;
+      }
+
+      function isPostLikeUpdate() {
+        let changed = request.resource.data.diff(resource.data).affectedKeys();
+        let oldList = resource.data.likedByUserIds;
+        let newList = request.resource.data.likedByUserIds;
+        return changed.hasOnly(['likedByUserIds', 'updatedAt'])
+          && request.resource.data.isActive == resource.data.isActive
+          && (((!(request.auth.uid in oldList) && request.auth.uid in newList && newList.size() == oldList.size() + 1))
+            || ((request.auth.uid in oldList && !(request.auth.uid in newList) && newList.size() == oldList.size() - 1)));
+      }
+
+      function isPostFlagCountUpdate() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['flagCount', 'updatedAt'])
+          && request.resource.data.flagCount == resource.data.flagCount + 1;
+      }
+
+      function isPostCommentCountUpdate() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount', 'updatedAt'])
+          && request.resource.data.commentCount == resource.data.commentCount + 1
+          && request.resource.data.isActive == resource.data.isActive;
+      }
+
+      allow read: if resource.data.isActive == true || isAdmin();
+      allow create: if isStudent() && validNetworkPostCreate();
+      allow update: if isAdmin() || (isStudent() && resource.data.authorId == request.auth.uid && request.resource.data.isActive == false) || isPostLikeUpdate() || isPostFlagCountUpdate() || isPostCommentCountUpdate();
+      allow delete: if isAdmin() || (isStudent() && resource.data.authorId == request.auth.uid);
+    }
+
+    match /networkPostComments/{commentId} {
+      allow read: if isActiveUser();
+      allow create: if isStudent()
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.postId is string
+        && request.resource.data.body is string && request.resource.data.body.size() >= 2 && request.resource.data.body.size() <= 1000;
+      allow delete: if isStudent() && resource.data.authorId == request.auth.uid;
+      allow update: if false;
+    }
+
+    match /networkPostFlags/{flagId} {
+      allow read: if isAdmin() || (isStudent() && resource.data.reporterId == request.auth.uid);
+      allow create: if isStudent() && request.resource.data.reporterId == request.auth.uid
+        && flagId == request.resource.data.postId + '_' + request.auth.uid;
+      allow delete: if isAdmin() || (isStudent() && resource.data.reporterId == request.auth.uid);
+      allow update: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // codingQuestions — student-contributed coding practice and solutions
+    // -------------------------------------------------------------------------
+    match /codingQuestions/{questionId} {
+      function validQuestionCreate() {
+        let data = request.resource.data;
+        return data.authorId == request.auth.uid
+          && data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 120
+          && data.title is string && data.title.size() >= 3 && data.title.size() <= 140
+          && data.problemStatement is string && data.problemStatement.size() >= 20 && data.problemStatement.size() <= 2500
+          && data.solution is string && data.solution.size() >= 20 && data.solution.size() <= 8000
+          && data.language is string && data.language.size() >= 1 && data.language.size() <= 40
+          && data.difficulty in ['EASY', 'MEDIUM', 'HARD']
+          && data.tags is list && data.tags.size() <= 5
+          && data.likedByUserIds is list && data.likedByUserIds.size() == 0
+          && data.commentCount == 0
+          && data.flagCount == 0
+          && data.isActive == true;
+      }
+
+      function isQuestionOwner() {
+        return isAuth() && resource.data.authorId == request.auth.uid;
+      }
+
+      function isQuestionEngagementUpdate() {
+        let changed = request.resource.data.diff(resource.data).affectedKeys();
+        let oldList = resource.data.likedByUserIds;
+        let newList = request.resource.data.likedByUserIds;
+        return changed.hasOnly(['likedByUserIds', 'updatedAt'])
+          && request.resource.data.authorId == resource.data.authorId
+          && request.resource.data.isActive == resource.data.isActive
+          && (((!(request.auth.uid in oldList) && request.auth.uid in newList && newList.size() == oldList.size() + 1))
+            || ((request.auth.uid in oldList && !(request.auth.uid in newList) && newList.size() == oldList.size() - 1)));
+      }
+
+      function isFlagCountUpdate() {
+        let changed = request.resource.data.diff(resource.data).affectedKeys();
+        return changed.hasOnly(['flagCount', 'updatedAt'])
+          && request.resource.data.flagCount == resource.data.flagCount + 1;
+      }
+
+      allow read: if resource.data.isActive == true || isAdmin();
+      allow create: if isStudent() && validQuestionCreate();
+      allow update: if isAdmin() || (isQuestionOwner() && request.resource.data.isActive == false) || isQuestionEngagementUpdate() || isFlagCountUpdate();
+      allow delete: if isAdmin() || isQuestionOwner();
+    }
+
+    match /codingQuestionComments/{commentId} {
+      function validCommentCreate() {
+        let data = request.resource.data;
+        return data.authorId == request.auth.uid
+          && data.questionId is string && data.questionId.size() > 0
+          && data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 120
+          && data.body is string && data.body.size() >= 2 && data.body.size() <= 1000;
+      }
+
+      allow read: if isActiveUser();
+      allow create: if isStudent() && validCommentCreate();
+      allow delete: if isStudent() && resource.data.authorId == request.auth.uid;
+      allow update: if false;
+    }
+
+    match /codingQuestionFlags/{flagId} {
+      function validFlagCreate() {
+        let data = request.resource.data;
+        return data.reporterId == request.auth.uid
+          && data.questionId is string && data.questionId.size() > 0
+          && data.reason is string && data.reason.size() >= 3 && data.reason.size() <= 300;
+      }
+
+      allow read: if isAdmin() || (isAuth() && resource.data.reporterId == request.auth.uid);
+      allow create: if isStudent() && validFlagCreate()
+        && flagId == request.resource.data.questionId + '_' + request.auth.uid;
+      allow delete: if isAdmin() || (isAuth() && resource.data.reporterId == request.auth.uid);
+      allow update: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Doubt Exchange — anonymous question signals with parallel answer branches
+    // -------------------------------------------------------------------------
+    match /doubts/{doubtId} {
+      function validDoubtCreate() {
+        let data = request.resource.data;
+        return data.authorId == request.auth.uid
+          && data.authorAlias is string && data.authorAlias.size() >= 3 && data.authorAlias.size() <= 60
+          && data.title is string && data.title.size() >= 8 && data.title.size() <= 120
+          && data.context is string && data.context.size() >= 20 && data.context.size() <= 800
+          && data.category in ['ACADEMICS', 'TECH', 'CAREER', 'COLLEGE_LIFE', 'WELLBEING']
+          && data.helpModes is list && data.helpModes.size() > 0 && data.helpModes.size() <= 4
+          && data.urgency in ['CURIOUS', 'STUCK', 'URGENT']
+          && data.status == 'OPEN'
+          && data.branchCount == 0
+          && data.sessionSupporterIds is list && data.sessionSupporterIds.size() == 0
+          && data.isActive == true;
+      }
+
+      function isBranchCountIncrement() {
+        let changed = request.resource.data.diff(resource.data).affectedKeys();
+        return changed.hasOnly(['branchCount', 'updatedAt'])
+          && request.resource.data.branchCount == resource.data.branchCount + 1;
+      }
+
+      function isSessionSupportToggle() {
+        let changed = request.resource.data.diff(resource.data).affectedKeys();
+        let oldList = resource.data.sessionSupporterIds;
+        let newList = request.resource.data.sessionSupporterIds;
+        return changed.hasOnly(['sessionSupporterIds', 'updatedAt'])
+          && ((!(request.auth.uid in oldList) && request.auth.uid in newList && newList.size() == oldList.size() + 1)
+            || (request.auth.uid in oldList && !(request.auth.uid in newList) && newList.size() == oldList.size() - 1));
+      }
+
+      function isOwnerDoubtUpdate() {
+        let changed = request.resource.data.diff(resource.data).affectedKeys();
+        return resource.data.authorId == request.auth.uid
+          && changed.hasOnly(['status', 'isActive', 'updatedAt'])
+          && request.resource.data.status in ['OPEN', 'RESOLVED'];
+      }
+
+      allow read: if resource.data.isActive == true;
+      allow create: if canUseDoubtExchange() && validDoubtCreate();
+      allow update: if canUseDoubtExchange() && (isBranchCountIncrement() || isSessionSupportToggle() || isOwnerDoubtUpdate());
+      allow delete: if false;
+    }
+
+    match /doubtBranches/{branchId} {
+      function validBranchCreate() {
+        let data = request.resource.data;
+        return data.authorId == request.auth.uid
+          && data.doubtId is string && data.doubtId.size() > 0
+          && data.authorAlias is string && data.authorAlias.size() >= 3 && data.authorAlias.size() <= 60
+          && data.angle in ['SIMPLE', 'EXAMPLE', 'DEEP_DIVE', 'DIFFERENT_TAKE', 'RESOURCE']
+          && data.body is string && data.body.size() >= 15 && data.body.size() <= 1000
+          && data.helpfulByUserIds is list && data.helpfulByUserIds.size() == 0;
+      }
+
+      function isHelpfulToggle() {
+        let changed = request.resource.data.diff(resource.data).affectedKeys();
+        let oldList = resource.data.helpfulByUserIds;
+        let newList = request.resource.data.helpfulByUserIds;
+        return changed.hasOnly(['helpfulByUserIds', 'updatedAt'])
+          && ((!(request.auth.uid in oldList) && request.auth.uid in newList && newList.size() == oldList.size() + 1)
+            || (request.auth.uid in oldList && !(request.auth.uid in newList) && newList.size() == oldList.size() - 1));
+      }
+
+      allow read: if true;
+      allow create: if canUseDoubtExchange() && validBranchCreate();
+      allow update: if canUseDoubtExchange() && isHelpfulToggle();
+      allow delete: if canUseDoubtExchange() && resource.data.authorId == request.auth.uid;
+    }
+
+    // -------------------------------------------------------------------------
+    // canvasRooms — realtime student canvas, presence, text and voice drops
+    // -------------------------------------------------------------------------
+    match /canvasRooms/{roomId} {
+      allow read: if isActiveUser();
+      allow create, update: if isStudent();
+      allow delete: if isAdmin();
+
+      match /drops/{dropId} {
+        function validCanvasDrop() {
+          let data = request.resource.data;
+          return data.authorId == request.auth.uid
+            && data.authorName is string && data.authorName.size() > 0 && data.authorName.size() <= 80
+            && data.kind in ['text', 'voice']
+            && data.text is string && data.text.size() <= 220
+            // A generous world-coordinate guard keeps the board effectively
+            // infinite while rejecting accidental infinities / extreme values.
+            && data.x is number && data.x >= -100000 && data.x <= 100000
+            && data.y is number && data.y >= -100000 && data.y <= 100000
+            && data.color is string
+            && data.reactedBy is list && data.reactedBy.size() == 0
+            && (!('mentions' in data) || (data.mentions is list && data.mentions.size() <= 10))
+            && (!('mentionNames' in data) || (data.mentionNames is list && data.mentionNames.size() <= 10));
+        }
+
+        allow read: if isActiveUser();
+        allow create: if isStudent() && validCanvasDrop();
+        // Moving cards and sparking ideas are intentionally collaborative.
+        allow update: if isStudent()
+          && request.resource.data.authorId == resource.data.authorId
+          && request.resource.data.kind == resource.data.kind
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['x', 'y', 'reactedBy']);
+        allow delete: if isAdmin() || (isStudent() && resource.data.authorId == request.auth.uid);
+      }
+
+      match /presence/{userId} {
+        allow read: if isActiveUser();
+        allow create, update, delete: if isStudent() && request.auth.uid == userId;
+      }
+    }
+
+    // Diagnostic documents are written only by trusted Cloud Functions and
+    // contain internal operational data. Clients cannot read or alter them.
+    match /clientErrorReports/{reportId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /clientErrorRateLimits/{userId} {
+      allow read, write: if false;
     }
   }
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * CampusFlow deployment orchestrator.
+ * Citians deployment orchestrator.
  *
  * Usage:
  *   node scripts/deploy.mjs                    # deploy to dev (default)
@@ -59,7 +59,7 @@ function warnProdEnv() {
   }
 }
 
-console.log(`\nCampusFlow deploy → Firebase project alias: ${projectAlias}`);
+console.log(`\nCitians deploy → Firebase project alias: ${projectAlias}`);
 console.log(`Targets: ${onlyArg}`);
 
 if (isProd) {

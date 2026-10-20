@@ -6,7 +6,7 @@ import { Platform } from 'react-native';
  *
  * - Web / iOS simulator: localhost
  * - Android emulator: 10.0.2.2 (when no Expo debugger host is available)
- * - Physical device (Expo Go): LAN IP from Expo's debuggerHost (Metro bundler address)
+ * - Physical device (Expo Go / Dev Client): LAN IP from Expo's debuggerHost (Metro bundler address)
  * - Override anytime with EXPO_PUBLIC_EMULATOR_HOST in .env
  */
 export function getEmulatorHost(): string {

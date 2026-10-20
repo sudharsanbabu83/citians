@@ -2,7 +2,7 @@ import { ExpoConfig, ConfigContext } from 'expo/config';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: 'CampusFlow',
+  name: 'Citians',
   slug: 'campusflow',
   version: '1.0.0',
   orientation: 'portrait',
@@ -12,13 +12,21 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: true,
     bundleIdentifier: 'com.campusflow.app',
+    buildNumber: '1',
+    googleServicesFile:
+      process.env.GOOGLE_SERVICES_PLIST ?? './GoogleService-Info.plist',
+    infoPlist: {
+      NSCameraUsageDescription:
+        'Allow Citians to access your camera for QR code scanning.',
+      UIBackgroundModes: ['remote-notification'],
+    },
   },
   android: {
     package: 'com.campusflow.app',
     edgeToEdgeEnabled: true,
     googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? './google-services.json',
     adaptiveIcon: {
-      backgroundColor: '#1E3A8A',
+      backgroundColor: '#000000',
       foregroundImage: './assets/images/android-icon-foreground.png',
       backgroundImage: './assets/images/android-icon-background.png',
       monochromeImage: './assets/images/android-icon-monochrome.png',
@@ -32,26 +40,38 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   plugins: [
     'expo-router',
     [
+      'expo-audio',
+      {
+        microphonePermission:
+          'Allow Citians to use your microphone for live Pulse Talk voice drops.',
+      },
+    ],
+    [
       'expo-splash-screen',
       {
-        image: './assets/images/splash-icon.png',
+        // Show the butterfly on the native launch screen. The JS splash that
+        // follows keeps the existing wordmark-and-flight animation unchanged.
+        image: './assets/splash/butterfly-transparent.png',
+        imageWidth: 280,
         resizeMode: 'contain',
-        backgroundColor: '#1E3A8A',
+        backgroundColor: '#000000',
       },
     ],
     [
       'expo-camera',
       {
-        cameraPermission: 'Allow CampusFlow to access your camera for QR code scanning.',
+        cameraPermission: 'Allow Citians to access your camera for QR code scanning.',
       },
     ],
     [
       'expo-notifications',
       {
         icon: './assets/images/icon.png',
-        color: '#1E3A8A',
+        color: '#191919',
+        mode: 'production',
       },
     ],
+    '@react-native-community/datetimepicker',
   ],
   experiments: {
     typedRoutes: true,

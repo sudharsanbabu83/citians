@@ -1,5 +1,7 @@
 import {
   signInWithEmailAndPassword,
+  sendEmailVerification,
+  reload,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   type User as FirebaseUser,
@@ -36,8 +38,12 @@ export function validateEmailDomain(email: string): void {
   const domain = getCollegeEmailDomain();
 
   if (!isCollegeEmail(email, domain)) {
-    throw new Error(`Please sign in with your CIT college email (@${domain}).`);
+    throw new Error(`Please use your CIT college email (@${domain}).`);
   }
+}
+
+export function userNeedsProfileSetup(profile: User): boolean {
+  return profile.role === 'STUDENT' && !profile.username?.trim();
 }
 
 export function mapAuthError(error: unknown): string {
@@ -52,12 +58,18 @@ export function mapAuthError(error: unknown): string {
     case 'auth/user-not-found':
     case 'auth/wrong-password':
     case 'auth/invalid-credential':
-      if (useEmulators) {
-        return 'No account in the emulator (or wrong password). Run npm run seed on your PC while emulators are running, then try again. Password for seed users: password123';
-      }
-      return 'Invalid email or password.';
+      return 'No account found, or the password is incorrect. Create an account to get started.';
+    case 'auth/email-already-in-use':
+      return 'This email is already registered. Sign in instead.';
+    case 'auth/weak-password':
+      return 'Password must be at least 6 characters.';
     case 'auth/too-many-requests':
       return 'Too many attempts. Please try again later.';
+    case 'functions/failed-precondition':
+    case 'functions/already-exists':
+    case 'functions/invalid-argument':
+    case 'functions/not-found':
+      return message || 'This action is not allowed right now.';
     case 'auth/network-request-failed':
       if (useEmulators) {
         return 'Network error. Check your connection and ensure emulators are running.';
@@ -74,7 +86,18 @@ export async function signInWithEmailPassword(
 ): Promise<FirebaseUser> {
   validateEmailDomain(email.trim());
   const credential = await signInWithEmailAndPassword(auth, email.trim(), password);
+  await reload(credential.user);
+  if (!credential.user.emailVerified) {
+    await sendEmailVerification(credential.user);
+    throw new Error(
+      'Please verify your college email using the link we sent. A new verification email has been sent.'
+    );
+  }
   return credential.user;
+}
+
+export async function sendCollegeEmailVerification(firebaseUser: FirebaseUser): Promise<void> {
+  await sendEmailVerification(firebaseUser);
 }
 
 export async function signOutUser(): Promise<void> {
@@ -158,7 +181,7 @@ export async function loadAuthenticatedSession(
 
   if (!profile) {
     await signOutUser();
-    throw new Error('Account not provisioned. Contact your college admin.');
+    throw new Error('Account not provisioned. Contact your college admin or create an account.');
   }
 
   if (!profile.isActive) {
@@ -171,16 +194,14 @@ export async function loadAuthenticatedSession(
     roleProfile = await fetchRoleProfile(firebaseUser.uid, profile.role);
     if (!roleProfile) {
       await signOutUser();
-      throw new Error('Role profile not found. Run the emulator seed and sign in again.');
+      throw new Error('Student profile is missing. Please contact an administrator.');
     }
 
     const departmentId = roleProfile.data.departmentId;
     const deptSnap = await getDoc(doc(db, COLLECTIONS.DEPARTMENTS, departmentId));
     if (!deptSnap.exists()) {
       await signOutUser();
-      throw new Error(
-        'College department data is missing. While emulators are running, run: npm run seed'
-      );
+      throw new Error('College department data is missing. Please contact an administrator.');
     }
   }
 
@@ -198,8 +219,13 @@ export function getRoleHomeRoute(role: Role): Href {
     case 'HOD':
       return '/(hod)/(tabs)';
     case 'ADMIN':
+    case 'SUPER_ADMIN':
       return '/(admin)';
+    case 'COMPETITIONS_ADMIN':
+      return '/(competitions-admin)/(tabs)';
     default:
       return '/login';
   }
 }
+
+export const SETUP_PROFILE_ROUTE = '/setup-profile' as Href;

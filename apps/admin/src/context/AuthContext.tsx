@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const user = await authSignIn(email, password);
       const loaded = await loadUserProfile(user.uid);
-      if (!loaded || loaded.role !== 'ADMIN') {
+      if (!loaded || !['ADMIN', 'SUPER_ADMIN'].includes(loaded.role)) {
         await authSignOut();
         throw new Error('Admin access only. Sign in with an admin account.');
       }

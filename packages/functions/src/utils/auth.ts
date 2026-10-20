@@ -44,7 +44,9 @@ export async function assertRole(
 ): Promise<AuthContext> {
   const authContext = await assertAuth(request);
 
-  if (!allowedRoles.includes(authContext.role)) {
+  // The Super Admin can use every existing protected operation. Individual
+  // Super Admin-only operations still list only SUPER_ADMIN above.
+  if (authContext.role !== 'SUPER_ADMIN' && !allowedRoles.includes(authContext.role)) {
     throw new HttpsError(
       'permission-denied',
       `Role ${authContext.role} is not authorized for this action.`

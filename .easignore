@@ -1,0 +1,29 @@
+# Keep the generated native projects in the EAS archive because the Android
+# focus blocker includes a custom Accessibility Service.
+apps/mobile/ios/
+
+# Gradle caches from local prebuild attempts
+**/.gradle/
+
+# Keep local configuration and Firebase service files out of the EAS archive.
+# EAS file secrets are made available by the builder through GOOGLE_SERVICES_JSON
+# and GOOGLE_SERVICES_PLIST, which app.config.ts resolves at build time.
+.env
+.env.local
+.env.production
+.env.*.local
+!.env.example
+!.env.production.example
+apps/mobile/google-services.json
+apps/mobile/GoogleService-Info.plist
+
+# Local tooling and generated artifacts.
+node_modules/
+apps/mobile/.expo/
+apps/mobile/.eas/
+apps/mobile/dist/
+apps/mobile/web-build/
+dist/
+build/
+*.tsbuildinfo
+*.log

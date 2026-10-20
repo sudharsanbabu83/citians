@@ -10,9 +10,10 @@ import {
 import { assertRole } from '../utils/auth';
 import { callableOptions } from '../utils/callableOptions';
 import { auth, db } from '../utils/firebase';
+import { allocateCitianId } from '../utils/citianId';
 
 export const provisionUser = onCall(callableOptions, async (request) => {
-  await assertRole(request, ['ADMIN']);
+  const actor = await assertRole(request, ['ADMIN']);
 
   const parsed = provisionUserInputSchema.safeParse(request.data);
   if (!parsed.success) {
@@ -20,6 +21,9 @@ export const provisionUser = onCall(callableOptions, async (request) => {
   }
 
   const input = parsed.data;
+  if (input.role === 'SUPER_ADMIN' && actor.role !== 'SUPER_ADMIN') {
+    throw new HttpsError('permission-denied', 'Only a Super Admin can provision a Super Admin.');
+  }
   const email = input.email.trim().toLowerCase();
 
   if (!isCollegeEmail(email, COLLEGE_EMAIL_DOMAIN)) {
@@ -37,7 +41,7 @@ export const provisionUser = onCall(callableOptions, async (request) => {
   try {
     const created = await auth.createUser({
       email,
-      password: input.password,
+      ...(input.password ? { password: input.password } : {}),
       displayName: input.name,
       emailVerified: true,
     });
@@ -59,6 +63,7 @@ export const provisionUser = onCall(callableOptions, async (request) => {
       .set({
         uid,
         name: input.name,
+        citianId: await allocateCitianId(),
         email,
         phone: input.phone ?? '',
         role: input.role,

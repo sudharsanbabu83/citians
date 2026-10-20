@@ -1,18 +1,30 @@
-import { useEffect, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, type ComponentType, type ReactNode } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { Layout } from './components/Layout';
 import { connectFirebaseEmulators } from './config/firebase';
 import { useAuth } from './context/AuthContext';
-import { AuditLogsPage } from './pages/AuditLogsPage';
-import { DashboardPage } from './pages/DashboardPage';
-import { DepartmentsPage } from './pages/DepartmentsPage';
-import { HodsPage } from './pages/HodsPage';
-import { LoginPage } from './pages/LoginPage';
-import { ODPassesPage } from './pages/ODPassesPage';
-import { ODRequestsPage } from './pages/ODRequestsPage';
-import { StudentsPage } from './pages/StudentsPage';
-import { VerificationLogsPage } from './pages/VerificationLogsPage';
+
+function lazyNamed<T extends Record<string, ComponentType>>(loader: () => Promise<T>, name: keyof T) {
+  return lazy(async () => ({ default: (await loader())[name] }));
+}
+
+const AuditLogsPage = lazyNamed(() => import('./pages/AuditLogsPage'), 'AuditLogsPage');
+const CompetitionsAdminsPage = lazyNamed(() => import('./pages/CompetitionsAdminsPage'), 'CompetitionsAdminsPage');
+const CanvasModerationPage = lazyNamed(() => import('./pages/CanvasModerationPage'), 'CanvasModerationPage');
+const DashboardPage = lazyNamed(() => import('./pages/DashboardPage'), 'DashboardPage');
+const DepartmentsPage = lazyNamed(() => import('./pages/DepartmentsPage'), 'DepartmentsPage');
+const EventsPage = lazyNamed(() => import('./pages/EventsPage'), 'EventsPage');
+const HodsPage = lazyNamed(() => import('./pages/HodsPage'), 'HodsPage');
+const LoginPage = lazyNamed(() => import('./pages/LoginPage'), 'LoginPage');
+const StudentsPage = lazyNamed(() => import('./pages/StudentsPage'), 'StudentsPage');
+const SuperAdminPage = lazyNamed(() => import('./pages/SuperAdminPage'), 'SuperAdminPage');
+const VerificationLogsPage = lazyNamed(() => import('./pages/VerificationLogsPage'), 'VerificationLogsPage');
+const SystemHealthPage = lazyNamed(() => import('./pages/SystemHealthPage'), 'SystemHealthPage');
+const ActiveUsersPage = lazyNamed(() => import('./pages/ActiveUsersPage'), 'ActiveUsersPage');
+const TechPulsePage = lazyNamed(() => import('./pages/TechPulsePage'), 'TechPulsePage');
+const DailySparksPage = lazyNamed(() => import('./pages/DailySparksPage'), 'DailySparksPage');
+const OpeningSpotlightsPage = lazyNamed(() => import('./pages/OpeningSpotlightsPage'), 'OpeningSpotlightsPage');
 
 function RequireAdmin({ children }: { children: ReactNode }) {
   const { profile, isLoading } = useAuth();
@@ -25,7 +37,7 @@ function RequireAdmin({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!profile || profile.role !== 'ADMIN') {
+  if (!profile || !['ADMIN', 'SUPER_ADMIN'].includes(profile.role)) {
     return <Navigate to="/login" replace />;
   }
 
@@ -47,10 +59,17 @@ function AppRoutes() {
         <Route path="departments" element={<DepartmentsPage />} />
         <Route path="students" element={<StudentsPage />} />
         <Route path="hods" element={<HodsPage />} />
-        <Route path="od-requests" element={<ODRequestsPage />} />
-        <Route path="od-passes" element={<ODPassesPage />} />
+        <Route path="competitions-admins" element={<CompetitionsAdminsPage />} />
+        <Route path="events" element={<EventsPage />} />
+        <Route path="canvas-moderation" element={<CanvasModerationPage />} />
+        <Route path="tech-pulse" element={<TechPulsePage />} />
+        <Route path="daily-sparks" element={<DailySparksPage />} />
+        <Route path="opening-spotlight" element={<OpeningSpotlightsPage />} />
         <Route path="audit-logs" element={<AuditLogsPage />} />
         <Route path="verification-logs" element={<VerificationLogsPage />} />
+        <Route path="health" element={<SystemHealthPage />} />
+        <Route path="active-users" element={<ActiveUsersPage />} />
+        <Route path="super-admin" element={<SuperAdminPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
@@ -62,5 +81,5 @@ export default function App() {
     connectFirebaseEmulators();
   }, []);
 
-  return <AppRoutes />;
+  return <Suspense fallback={<div className="login-page"><p>Loading…</p></div>}><AppRoutes /></Suspense>;
 }

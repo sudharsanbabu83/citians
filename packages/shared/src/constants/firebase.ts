@@ -1,5 +1,5 @@
 /**
- * CampusFlow Firebase project (Console: Campusflow).
+ * Citians Firebase project (Console: Citians).
  * Client API keys are restricted in Firebase Console — safe to embed in apps.
  */
 export const FIREBASE_PROJECT_ID = 'campusflow-f798c';
@@ -10,6 +10,10 @@ export const FIREBASE_MESSAGING_SENDER_ID = '1023799870586';
 /** Android app (mobile) — from google-services.json */
 export const FIREBASE_ANDROID_API_KEY = 'AIzaSyB_4Dg1p2nr6agFJyA_aQdLUcWCRY1kN4o';
 export const FIREBASE_ANDROID_APP_ID = '1:1023799870586:android:3b83d7106f4ffd3b4c27c3';
+
+/** iOS app (mobile) — from GoogleService-Info.plist */
+export const FIREBASE_IOS_API_KEY = 'AIzaSyC3ca05NyVPrRmxt5LeH7X0j2t8v15NaGA';
+export const FIREBASE_IOS_APP_ID = '1:1023799870586:ios:7c42bc0ae6d857934c27c3';
 
 /** Web app (admin dashboard) — from Firebase Console web app config */
 export const FIREBASE_WEB_API_KEY = 'AIzaSyBk5mJHez0J_EkBZUU1ZnRKtQEs2gTO0M0';

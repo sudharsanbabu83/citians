@@ -1,0 +1,58 @@
+{
+  "name": "Citians Butterfly Splash",
+  "duration_ms": 3000,
+  "background": "#000000",
+  "assets": {
+    "wordmark": "citians_wordmark.png",
+    "butterfly": "butterfly.png",
+    "glow": "gold_glow.png"
+  },
+  "timeline": [
+    {
+      "time_ms": 0,
+      "event": "wordmark visible centered; butterfly starts off-screen left"
+    },
+    {
+      "time_ms": 300,
+      "event": "butterfly enters and begins curved upward flight; wings flap"
+    },
+    {
+      "time_ms": 1200,
+      "event": "butterfly crosses above Citians"
+    },
+    {
+      "time_ms": 1800,
+      "event": "butterfly turns down toward upper-right of letter S"
+    },
+    {
+      "time_ms": 2200,
+      "event": "butterfly lands gently on S"
+    },
+    {
+      "time_ms": 2400,
+      "event": "one final small wing flap"
+    },
+    {
+      "time_ms": 2700,
+      "event": "butterfly settles"
+    },
+    {
+      "time_ms": 3000,
+      "event": "fade splash into app"
+    }
+  ],
+  "motion": {
+    "path": "cubic Bezier/S-curve from off-screen left, above wordmark, ending at upper-right of S",
+    "rotation": "orient butterfly approximately along path tangent, then settle upright",
+    "scale": "subtle 0.90 -> 1.05 -> 1.0",
+    "trail": "optional low-opacity gold particles/glow during flight only"
+  },
+  "integration_notes": [
+    "Keep PNG transparency.",
+    "Do not add a second static butterfly to the wordmark.",
+    "The moving butterfly becomes the final logo butterfly by landing on S.",
+    "Play once; do not loop.",
+    "Use contain/aspect-fit scaling.",
+    "After completion replace splash route with existing Home/Login route."
+  ]
+}

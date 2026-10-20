@@ -12,7 +12,7 @@ export function StudentsPage() {
   const [form, setForm] = useState({
     email: '',
     name: '',
-    password: 'password123',
+    password: '',
     departmentId: 'cse',
     registerNumber: '',
     year: '3',
@@ -32,12 +32,18 @@ export function StudentsPage() {
   const userMap = new Map(users.map((u) => [u.uid, u]));
 
   const createMutation = useMutation({
-    mutationFn: () =>
-      provisionUser({
+    mutationFn: () => {
+      const payload = {
         ...form,
-        role: 'STUDENT',
+        role: 'STUDENT' as const,
         phone: '',
-      }),
+      };
+      if (!payload.password.trim()) {
+        const { password: _password, ...rest } = payload;
+        return provisionUser(rest);
+      }
+      return provisionUser(payload);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -87,8 +93,12 @@ export function StudentsPage() {
                 <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
               </div>
               <div className="form-field">
-                <label>Password</label>
-                <input value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+                <label>Password (optional)</label>
+                <input
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  placeholder="Leave blank — student completes registration in the app"
+                />
               </div>
               <div className="form-field">
                 <label>Department ID</label>
@@ -124,6 +134,7 @@ export function StudentsPage() {
           <thead>
             <tr>
               <th>Name</th>
+              <th>Citian ID</th>
               <th>Email</th>
               <th>Reg. No</th>
               <th>Dept</th>
@@ -134,15 +145,16 @@ export function StudentsPage() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={7}>Loading…</td></tr>
+              <tr><td colSpan={8}>Loading…</td></tr>
             ) : students.length === 0 ? (
-              <tr><td colSpan={7}>No students</td></tr>
+              <tr><td colSpan={8}>No students</td></tr>
             ) : (
               students.map((s) => {
                 const user = userMap.get(s.userId);
                 return (
                   <tr key={s.id}>
                     <td>{user?.name ?? '—'}</td>
+                    <td>{user?.citianId ?? '—'}</td>
                     <td>{user?.email ?? '—'}</td>
                     <td>{s.registerNumber}</td>
                     <td>{s.departmentId}</td>

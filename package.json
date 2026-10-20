@@ -2,7 +2,7 @@
   "name": "campusflow",
   "version": "1.0.0",
   "private": true,
-  "description": "CampusFlow - College workflow management platform",
+  "description": "Citians - College workflow management platform",
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -18,15 +18,15 @@
     "dev:mobile:prod": "npm run start:prod -w @campusflow/mobile",
     "dev:mobile:web": "npm run web -w @campusflow/mobile",
     "emulators:kill-ports": "powershell -ExecutionPolicy Bypass -File ./scripts/kill-emulator-ports.ps1",
-    "emulators:prepare-data": "powershell -ExecutionPolicy Bypass -File ./scripts/prepare-emulator-data.ps1",
-    "emulators": "npm run emulators:kill-ports && npm run emulators:prepare-data && firebase emulators:start --import=./emulator-data --export-on-exit=./emulator-data",
+    "emulators": "npm run emulators:kill-ports && firebase emulators:start",
     "emulators:fresh": "firebase emulators:start",
     "emulators:exec": "firebase emulators:exec",
-    "seed": "npm run seed -w @campusflow/functions",
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test:rules": "firebase emulators:exec --only firestore,storage --project campusflow-f798c \"node scripts/run-rules-tests.mjs\"",
     "test:rules:local": "node scripts/run-rules-tests.mjs",
+    "test:auth": "npm run build:functions && cross-env FUNCTIONS_DISCOVERY_TIMEOUT=60000 firebase emulators:exec --only auth,firestore,functions --project campusflow-f798c \"node scripts/test-auth-flow.mjs\"",
+    "test:event-attendance": "npm run build:functions && cross-env FUNCTIONS_DISCOVERY_TIMEOUT=60000 firebase emulators:exec --only auth,firestore,functions --project campusflow-f798c \"node scripts/test-event-attendance-flow.mjs\"",
     "deploy": "node scripts/deploy.mjs",
     "deploy:dev": "node scripts/deploy.mjs --project dev",
     "deploy:prod": "node scripts/deploy.mjs --project prod",
@@ -37,9 +37,12 @@
     "android": "npm run run:android -w @campusflow/mobile",
     "ios": "npm run run:ios -w @campusflow/mobile",
     "build:mobile:preview": "npm run build:preview -w @campusflow/mobile",
+    "build:mobile:production": "npm run build:production -w @campusflow/mobile",
+    "build:mobile:preview:ios": "npm run build:preview:ios -w @campusflow/mobile",
     "eas-build-post-install": "npm run build:shared"
   },
   "devDependencies": {
+    "cross-env": "^7.0.3",
     "firebase-tools": "^14.0.0",
     "typescript": "~6.0.3"
   },

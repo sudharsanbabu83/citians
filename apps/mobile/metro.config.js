@@ -8,6 +8,7 @@ const workspaceRoot = path.resolve(projectRoot, '../..');
 const config = getDefaultConfig(projectRoot);
 
 config.watchFolders = [...new Set([...(config.watchFolders ?? []), workspaceRoot])];
+config.resolver.unstable_conditionNames = ['require', 'react-native', 'browser', 'default'];
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, 'node_modules'),
   path.resolve(workspaceRoot, 'node_modules'),

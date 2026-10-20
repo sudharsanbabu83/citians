@@ -10,7 +10,7 @@ export function usePushRegistration() {
     if (!user?.uid) return;
     registerForPushNotifications(user.uid).catch((err) => {
       if (__DEV__) {
-        console.log('[CampusFlow] Push registration failed:', (err as Error).message);
+        console.log('[Citians] Push registration failed:', (err as Error).message);
       }
     });
   }, [user?.uid]);

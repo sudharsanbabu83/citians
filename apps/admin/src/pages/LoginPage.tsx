@@ -5,11 +5,11 @@ import { useAuth } from '../context/AuthContext';
 
 export function LoginPage() {
   const { signIn, authError, clearError, profile, isLoading } = useAuth();
-  const [email, setEmail] = useState('admin.campusflow@citchennai.net');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  if (!isLoading && profile?.role === 'ADMIN') {
+  if (!isLoading && (profile?.role === 'ADMIN' || profile?.role === 'SUPER_ADMIN')) {
     return <Navigate to="/" replace />;
   }
 
@@ -29,8 +29,8 @@ export function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-card">
-        <h1>CampusFlow Admin</h1>
-        <p>Sign in with your admin college email to manage departments, users, and OD workflows.</p>
+        <h1>Citians Admin</h1>
+        <p>Sign in with your admin college email to manage campus content, users, and events.</p>
         {authError && <div className="error-banner">{authError}</div>}
         <form onSubmit={onSubmit} className="form-grid">
           <div className="form-field">

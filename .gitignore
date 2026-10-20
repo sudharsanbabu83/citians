@@ -11,6 +11,7 @@ node_modules/
 
 # Firebase
 .firebase/
+firebase-export-*/
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
@@ -26,6 +27,8 @@ apps/mobile/GoogleService-Info.plist
 apps/mobile/.expo/
 apps/mobile/dist/
 apps/mobile/web-build/
+apps/mobile/android/
+apps/mobile/.expo-android-export-check/
 /android
 /app.json
 
@@ -47,6 +50,11 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# Local test and preview artifacts
+tmp/
+output/
+.playwright-cli/
 
 # EAS
 apps/mobile/.eas/

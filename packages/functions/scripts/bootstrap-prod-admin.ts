@@ -34,10 +34,11 @@ const projectId = readFlag('--project') ?? process.env.GOOGLE_CLOUD_PROJECT ?? F
 const departmentId = readFlag('--department') ?? 'cse';
 const departmentName = readFlag('--department-name') ?? 'Computer Science and Engineering';
 const departmentCode = readFlag('--department-code') ?? 'CSE';
+const isSuperAdmin = args.includes('--super-admin');
 
 if (!email || !name || !password) {
   console.error(
-    'Usage: npm run bootstrap:admin -- --email <email> --name <name> --password <password> [--project campusflow-f798c]'
+    'Usage: npm run bootstrap:admin -- --email <email> --name <name> --password <password> [--super-admin] [--project campusflow-f798c]'
   );
   process.exit(1);
 }
@@ -69,6 +70,16 @@ const auth = admin.auth();
 
 const normalizedEmail = adminEmail;
 
+async function allocateCitianId(): Promise<string> {
+  const ref = db.collection(COLLECTIONS.SYSTEM).doc('citianIdCounter');
+  return db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    const next = Number(snapshot.data()?.lastNumber ?? 1233) + 1;
+    transaction.set(ref, { lastNumber: next, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    return `citian@${String(next).padStart(4, '0')}`;
+  });
+}
+
 async function bootstrap(): Promise<void> {
   console.log(`Bootstrapping admin on project: ${projectId}`);
   console.log('Ensure you are authenticated: firebase login && gcloud auth application-default login\n');
@@ -97,17 +108,19 @@ async function bootstrap(): Promise<void> {
   }
 
   const timestamp = admin.firestore.FieldValue.serverTimestamp();
+  const userRef = db.collection(COLLECTIONS.USERS).doc(uid);
+  const existingProfile = await userRef.get();
+  const citianId = existingProfile.data()?.citianId ?? await allocateCitianId();
 
-  await db
-    .collection(COLLECTIONS.USERS)
-    .doc(uid)
+  await userRef
     .set(
       {
         uid,
         name: adminName,
+        citianId,
         email: normalizedEmail,
         phone: '',
-        role: 'ADMIN',
+        role: isSuperAdmin ? 'SUPER_ADMIN' : 'ADMIN',
         isActive: true,
         createdAt: timestamp,
         updatedAt: timestamp,
@@ -131,6 +144,7 @@ async function bootstrap(): Promise<void> {
     );
 
   console.log('\nBootstrap complete.');
+  console.log(`  Role: ${isSuperAdmin ? 'SUPER_ADMIN' : 'ADMIN'}`);
   console.log('  Admin:', normalizedEmail);
   console.log('  UID:', uid);
   console.log('  Department:', departmentId);

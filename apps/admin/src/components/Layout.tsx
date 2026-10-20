@@ -7,10 +7,16 @@ const navItems = [
   { to: '/departments', label: 'Departments' },
   { to: '/students', label: 'Students' },
   { to: '/hods', label: 'HODs' },
-  { to: '/od-requests', label: 'OD Requests' },
-  { to: '/od-passes', label: 'OD Passes' },
+  { to: '/competitions-admins', label: 'Competitions Admins' },
+  { to: '/events', label: 'Events' },
+  { to: '/canvas-moderation', label: 'Canvas Moderation' },
+  { to: '/tech-pulse', label: 'Tech Pulse' },
+  { to: '/daily-sparks', label: 'Daily Spark' },
+  { to: '/opening-spotlight', label: 'Opening Spotlight' },
   { to: '/audit-logs', label: 'Audit Logs' },
   { to: '/verification-logs', label: 'Verification Logs' },
+  { to: '/health', label: 'System Health' },
+  { to: '/active-users', label: 'Active Users' },
 ];
 
 export function Layout() {
@@ -25,9 +31,9 @@ export function Layout() {
   return (
     <div className="admin-layout">
       <aside className="admin-sidebar">
-        <div className="logo">CampusFlow</div>
+        <div className="logo">Citians</div>
         <nav className="admin-nav">
-          {navItems.map((item) => (
+          {[...navItems, ...(profile?.role === 'SUPER_ADMIN' ? [{ to: '/super-admin', label: 'Super Admin Control' }] : [])].map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

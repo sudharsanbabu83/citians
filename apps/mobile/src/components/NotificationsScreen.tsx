@@ -10,26 +10,28 @@ import {
   View,
 } from 'react-native';
 
+import { useThemedStyles } from '@/src/hooks/useThemedStyles';
+import { useTheme } from '@/src/hooks/useTheme';
+import type { AppTheme } from '@/src/lib/themeStore';
 import { useMarkNotificationRead } from '@/src/hooks/useMarkNotificationRead';
+import { useBottomContentPadding } from '@/src/hooks/useBottomContentPadding';
 import { useNotifications } from '@/src/hooks/useNotifications';
 import {
   formatNotificationTime,
   type NotificationWithId,
 } from '@/src/lib/notifications';
 import { useAuthStore } from '@/src/lib/authStore';
-import { borderRadius, colors, shadows, spacing, typography } from '@/src/theme';
+import type { Role } from '@campusflow/shared';
+import { borderRadius, spacing } from '@/src/theme';
 
 function getNotificationIcon(type: NotificationWithId['type']): keyof typeof Ionicons.glyphMap {
   switch (type) {
-    case 'OD_APPROVED':
-    case 'OD_PASS_GENERATED':
-      return 'checkmark-circle-outline';
-    case 'OD_REJECTED':
-      return 'close-circle-outline';
-    case 'OD_CHANGES_REQUESTED':
-      return 'create-outline';
-    case 'OD_SUBMITTED':
-      return 'document-text-outline';
+    case 'EVENT_ANNOUNCEMENT':
+      return 'radio-outline';
+    case 'CANVAS_MENTION':
+      return 'at-outline';
+    case 'CANVAS_REPLY':
+      return 'git-branch-outline';
     default:
       return 'notifications-outline';
   }
@@ -37,26 +39,27 @@ function getNotificationIcon(type: NotificationWithId['type']): keyof typeof Ion
 
 function getNotificationRoute(
   notification: NotificationWithId,
-  role: 'STUDENT' | 'HOD' | 'ADMIN' | undefined
+  role: Role | undefined
 ): Href | null {
-  if (notification.entityType !== 'odRequests') return null;
-
-  if (role === 'HOD') {
-    return `/(hod)/od/${notification.entityId}` as Href;
+  if (notification.entityType === 'eventAnnouncements' && role === 'STUDENT') {
+    return `/(student)/events/${notification.entityId}/announcements` as Href;
   }
-  if (role === 'STUDENT') {
-    return `/(student)/od/${notification.entityId}` as Href;
+  if (notification.entityType === 'canvasDrops' && role === 'STUDENT') {
+    return '/(student)/(tabs)/canvas' as Href;
   }
   return null;
 }
 
 export function NotificationsScreen() {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const user = useAuthStore((s) => s.user);
   const profile = useAuthStore((s) => s.profile);
 
   const { data: notifications = [], isLoading, isError, refetch, isRefetching } =
     useNotifications(user?.uid);
   const markRead = useMarkNotificationRead(user?.uid);
+  const bottomPadding = useBottomContentPadding();
 
   const onPressNotification = async (notification: NotificationWithId) => {
     if (!notification.isRead) {
@@ -96,7 +99,11 @@ export function NotificationsScreen() {
   return (
     <FlatList
       style={styles.container}
-      contentContainerStyle={notifications.length === 0 ? styles.emptyContainer : styles.listContent}
+      contentContainerStyle={
+        notifications.length === 0
+          ? [styles.emptyContainer, { paddingBottom: bottomPadding }]
+          : [styles.listContent, { paddingBottom: bottomPadding }]
+      }
       data={notifications}
       keyExtractor={(item) => item.id}
       refreshControl={
@@ -107,13 +114,13 @@ export function NotificationsScreen() {
           <Ionicons name="notifications-off-outline" size={48} color={colors.textMuted} />
           <Text style={styles.emptyTitle}>No notifications yet</Text>
           <Text style={styles.emptyCaption}>
-            Updates about your OD requests will appear here.
+            Updates about events, learning, and campus activity will appear here.
           </Text>
         </View>
       }
       renderItem={({ item }) => (
         <Pressable
-          style={[styles.card, shadows.card, !item.isRead && styles.unreadCard]}
+          style={[styles.card, styles.cardShadow, !item.isRead && styles.unreadCard]}
           onPress={() => onPressNotification(item)}
         >
           <View style={styles.iconWrap}>
@@ -138,8 +145,10 @@ export function NotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+const createStyles = (theme: AppTheme) =>
+  StyleSheet.create({
+    cardShadow: theme.shadows.card,
+  container: { flex: 1, backgroundColor: theme.colors.background },
   listContent: { padding: spacing.md, gap: spacing.sm },
   emptyContainer: { flexGrow: 1, justifyContent: 'center', padding: spacing.lg },
   center: {
@@ -147,13 +156,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.lg,
-    backgroundColor: colors.background,
+    backgroundColor: theme.colors.background,
     gap: spacing.sm,
   },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: theme.colors.surface,
     borderRadius: borderRadius.md,
     padding: spacing.md,
     gap: spacing.sm,
@@ -161,31 +170,31 @@ const styles = StyleSheet.create({
   },
   unreadCard: {
     borderLeftWidth: 3,
-    borderLeftColor: colors.primary,
+    borderLeftColor: theme.colors.primary,
   },
   iconWrap: {
     width: 40,
     height: 40,
     borderRadius: borderRadius.full,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: theme.colors.accentBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   textWrap: { flex: 1, gap: 2 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  title: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.text },
+  title: { flex: 1, fontSize: 15, fontWeight: '600', color: theme.colors.text },
   unreadTitle: { fontWeight: '800' },
   unreadDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: colors.primary,
+    backgroundColor: theme.colors.primary,
   },
-  body: { fontSize: 13, color: colors.textMuted, lineHeight: 18 },
-  time: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+  body: { fontSize: 13, color: theme.colors.textMuted, lineHeight: 18 },
+  time: { fontSize: 11, color: theme.colors.textMuted, marginTop: 2 },
   emptyState: { alignItems: 'center', gap: spacing.sm },
-  emptyTitle: { ...typography.heading, marginTop: spacing.sm },
-  emptyCaption: { ...typography.caption, textAlign: 'center', lineHeight: 20 },
-  errorTitle: { ...typography.heading, marginTop: spacing.sm },
-  linkText: { color: colors.primary, fontWeight: '600', marginTop: spacing.sm },
+  emptyTitle: { ...theme.typography.heading, marginTop: spacing.sm },
+  emptyCaption: { ...theme.typography.caption, textAlign: 'center', lineHeight: 20 },
+  errorTitle: { ...theme.typography.heading, marginTop: spacing.sm },
+  linkText: { color: theme.colors.primary, fontWeight: '600', marginTop: spacing.sm },
 });
